@@ -8,7 +8,7 @@ import java.io.StringReader
  */
 object PDDL {
 
-  def parseDomain(str: String) = {
+  def parseDomain(str: String):Domain = {
     import DomainReader._
     parse(phrase(DomainReader.domain), new StringReader(str)) match {
       case Success(dom, _) => dom
@@ -16,10 +16,10 @@ object PDDL {
     }
   }
 
-  def parseProblem(str: String) = {
+  def parseProblem(str: String):Problem = {
     import DomainReader._
     parse(phrase(DomainReader.problem), new StringReader(str)) match {
-      case Success(prob, _) => problem
+      case Success(prob, _) => prob
       case Failure(msg, _) => throw new RuntimeException("Parse error: " + msg)
     }
   }
@@ -42,14 +42,14 @@ object PDDL {
                      goal: Condition = AndCondition(IndexedSeq.empty),
                      metric: Option[MetricSpec] = None)
 
-  case class MetricSpec(m: MetricDir, value: FExp)
+  case class MetricSpec(m: MetricDir, value: ValExp)
   sealed trait MetricDir
   case object Minimize extends MetricDir
   case object Maximize extends MetricDir
 
 
-  case class Type(name: String, parent: Option[String])
-  case class Argument(name: String, tpe: Option[String])
+  case class Type(name: String, parent: String)
+  case class Argument(name: String, tpe: String)
   case class Predicate(name: String, args: IndexedSeq[Argument])
   case class Function(name: String, args: IndexedSeq[Argument], resultType: String = "number")
   case class Constraint()
@@ -64,46 +64,63 @@ object PDDL {
   case class AndCondition(conjuncts: IndexedSeq[Condition]) extends Condition
   case class UniversalCondition(scoped: IndexedSeq[Argument], cond: Condition) extends Condition
   case class ExistentialCondition(scoped: IndexedSeq[Argument], cond: Condition) extends Condition
-  case class FComp(comp: BinaryComp, arg1: FExp, arg2: FExp) extends Condition
-  case class Pred(predicate: String, args: IndexedSeq[Term]) extends Condition
+  case class FComp(comp: BinaryComp, arg1: ValExp, arg2: ValExp) extends Condition
+  case class RComp(arg1: RefExp, arg2: RefExp) extends Condition
+  case class Pred(predicate: String, args: IndexedSeq[RefExp]) extends Condition
   case class TimedCondition(time: TimeSpecifier, cond: Condition) extends Condition
   case class ContinuousCondition(cond: Condition) extends Condition
 
-  sealed trait Term extends FExp
-  case class Name(name: String) extends Term
-  case class Var(name: String) extends Term
-  case class FApplication(name: String, args: IndexedSeq[Term] = IndexedSeq.empty) extends Term with FExp
+  sealed trait ValExp
+  sealed trait RefExp
+  case class Name(name: String) extends RefExp
+  case class Var(name: String) extends RefExp
+  case class FApplication(name: String, args: IndexedSeq[RefExp] = IndexedSeq.empty) extends ValExp
+  case class RApplication(name: String, args: IndexedSeq[RefExp] = IndexedSeq.empty) extends RefExp
+  case class Number(num: Double) extends ValExp
+  case class BinaryExp(op: BinaryOp, lhs: ValExp, rhs: ValExp) extends ValExp
+  case class MultiExp(op: MultiOp, args: IndexedSeq[ValExp]) extends ValExp
+  case class Negation(x: ValExp) extends ValExp
 
-  sealed trait FExp
-  case class Number(num: Int) extends FExp
-  case class BinaryExp(op: BinaryOp, lhs: FExp, rhs: FExp) extends FExp
-  case class MultiExp(op: MultiOp, args: IndexedSeq[FExp]) extends FExp
-  case class Negation(x: FExp) extends FExp
-
-  sealed trait BinaryOp
-  sealed trait MultiOp extends BinaryOp
-  case object Minus extends BinaryOp
-  case object Div extends BinaryOp
-  case object Times extends MultiOp
-  case object Plus extends MultiOp
-
-  sealed trait BinaryComp
-  case object < extends BinaryComp
-  case object > extends BinaryComp
-  case object <= extends BinaryComp
-  case object >= extends BinaryComp
-  case object Equals extends BinaryComp
+  sealed trait BinaryComp {
+    def apply(a: Double, b: Double):Boolean
+  }
+  case object < extends BinaryComp {
+    def apply(a: Double, b: Double) = a < b
+  }
+  case object > extends BinaryComp {
+    def apply(a: Double, b: Double) = a > b
+  }
+  case object <= extends BinaryComp {
+    def apply(a: Double, b: Double) = a <= b
+  }
+  case object >= extends BinaryComp {
+    def apply(a: Double, b: Double) = a >= b
+  }
+  case object Equals extends BinaryComp {
+    def apply(a: Double, b: Double) = a == b
+    def apply(a: Int, b: Int) = a == b
+  }
 
   sealed trait Effect
   case class AndEffect(conjuncts: IndexedSeq[Effect]) extends Effect
-  case class UniversalEffect(scoped: IndexedSeq[Argument], cond: Effect) extends Effect
-  case class CondEffect(condition: Condition, cond: Effect) extends Effect
+  case class UniversalEffect(scoped: IndexedSeq[Argument], effect: Effect) extends Effect
+  case class CondEffect(condition: Condition, effect: Effect) extends Effect
   case class TimedEffect(time: TimeSpecifier, effect: Effect) extends Effect
 
   sealed trait PrimEffect extends Effect
   case class DisablePred(pred: Pred) extends PrimEffect
   case class EnablePred(pred: Pred) extends PrimEffect
-  case class AssignEffect(op: AssignOp, lhs: FApplication, rhs: FExp) extends PrimEffect
+  case class RefAssignEffect(lhs: RApplication, rhs: RefExp) extends PrimEffect
+  case class AssignEffect(op: AssignOp, lhs: FApplication, rhs: ValExp) extends PrimEffect {
+    def toRefAssignEffect = {
+      require(op == Assign, "Can't " + op + " references!")
+      val rexp = rhs match {
+        case FApplication(name, args) => RApplication(name, args)
+        case _ => error("Type Error!")
+      }
+      RefAssignEffect(RApplication(lhs.name, lhs.args), rexp)
+    }
+  }
 
   sealed trait TimeSpecifier
   case object Start extends TimeSpecifier
@@ -111,15 +128,9 @@ object PDDL {
 
 
 
-  sealed trait AssignOp
-  case object Assign extends AssignOp
-  case object ScaleUp extends AssignOp
-  case object ScaleDown extends AssignOp
-  case object Increase extends AssignOp
-  case object Decrease extends AssignOp
 
   sealed trait DurationConstraint
-  case class StandardDuration(comp: BinaryComp, value: FExp) extends DurationConstraint
+  case class StandardDuration(comp: BinaryComp, value: ValExp) extends DurationConstraint
 
 
   import scala.util.parsing.combinator.{ RegexParsers, JavaTokenParsers }
@@ -144,7 +155,7 @@ object PDDL {
     lazy val types = field("types")(typeList)
     lazy val constants = field("constants")(argList)
     lazy val predicates = field("predicates")(rep(predicate)) ^^ {_.toMap}
-    lazy val functions = field("functions")(typedList(function, addResultType _) ) ^^ {functions => functions.map(f => f.name -> f).toMap}
+    lazy val functions = field("functions")(typedList(function, addResultType _, "number") ) ^^ {functions => functions.map(f => f.name -> f).toMap}
     lazy val action = basicAction | durativeAction
 
 
@@ -171,7 +182,9 @@ object PDDL {
     lazy val precondition: Parser[Option[Condition]]  = sym("precondition") ~> emptyOr(pre_gd)
 
     lazy val effect:Parser[Effect] = (
-       surround(assign_op ~ commit(fterm) ~ fexp) ^^ { case a ~ b ~ c=> AssignEffect(a,b,c)}
+       surround("=" ~ fterm(RApplication(_,_)) ~ term) ^^ { case a ~ b ~ c=> RefAssignEffect(b,c)}
+         // note that this assignment can be
+      | surround(assign_op ~ commit(fterm(FApplication(_,_))) ~ fexp) ^^ { case a ~ b ~ c=> AssignEffect(a,b,c)}
       | fn("and")(rep(effect)) ^^ {list => AndEffect(list.toIndexedSeq)}
       | fn("forall")(varList ~ effect) ^^ { case  list~eff => UniversalEffect(list, eff)}
       | fn("when")(gd ~ effect) ^^ { case  gd~eff => CondEffect(gd, eff)}
@@ -204,6 +217,7 @@ object PDDL {
       atomic_pred
       | fn("exists")(surround(varList) ~ gd) ^^ {case (vars ~ con) => ExistentialCondition(vars, con)}
       | fn("forall")(surround(varList) ~ gd) ^^ {case (vars ~ con) => UniversalCondition(vars, con)}
+      | rcomp
       | fcomp
       | timed_gd
     )
@@ -220,18 +234,18 @@ object PDDL {
 
     lazy val atomic_pred = surround(name ~ rep(term)) ^^ {case (name ~ args) => Pred(name, args.toIndexedSeq)}
 
-    lazy val term: Parser[Term] = (
+    lazy val term: Parser[RefExp] = (
       name ^^ {Name(_)}
       | variable ^^ {Var(_)}
-      | fterm
+      | fterm(RApplication(_, _))
       )
 
-    lazy val fexp:Parser[FExp] = (
+    lazy val fexp:Parser[ValExp] = (
       number
         | surround(multi_op ~ rep1(fexp)) ^^ {case (a ~ b) => MultiExp(a,b.toIndexedSeq)}
         | surround(binary_op ~ fexp ~ fexp) ^^ {case (a ~ b ~ c) => BinaryExp(a,b,c)}
       | '-' ~> fexp ^^ { Negation(_)}
-      | fterm
+      | fterm(FApplication(_,_))
     )
 
     lazy val duration_constraint = emptyOr(simple_duration_constraint)
@@ -251,7 +265,7 @@ object PDDL {
       ) ^^ { case prob ~ fs => fs.foldLeft(prob)((p,f) => f(p))}
     )
 
-    lazy val objects = typedList(name, Argument(_:String, _:Option[String]))
+    lazy val objects = typedList(name, Argument(_:String, _:String))
     lazy val init = rep(init_el) ^^ {l => AndEffect(l.toIndexedSeq)}
     lazy val goal = pre_gd
     lazy val metric_spec = metric_dir ~ fexp ^^ {case (a ~ b) => MetricSpec(a, b)}
@@ -287,21 +301,22 @@ object PDDL {
       )
 
 
-    lazy val fterm = surround(name ~ rep(term)) ^^ { case (name~ args) => FApplication(name, args.toIndexedSeq)}
+    def fterm[T](fn: (String,IndexedSeq[RefExp])=>T) = surround(name ~ rep(term)) ^^ { case (name~ args) => fn(name, args.toIndexedSeq)}
 
     lazy val fcomp = surround(binary_comp ~ fexp ~ fexp) ^^ { case (b~l~r) => FComp(b, l, r)}
+    lazy val rcomp = surround("=" ~ term ~ term) ^^ { case (b~l~r) => RComp(l, r)}
 
-    lazy val argList = typedList(name, Argument(_:String, _: Option[String]))
-    lazy val varList = typedList(variable, Argument(_:String, _:Option[String]))
-    lazy val typeList = typedList(variable, Type(_:String, _: Option[String]))
+    lazy val argList = typedList(name, Argument(_:String, _: String))
+    lazy val varList = typedList(variable, Argument(_:String, _:String))
+    lazy val typeList = typedList(variable, Type(_:String, _: String))
 
 
-    def typedList[T, U](vp: Parser[T], lift: (T,Option[String])=>U): Parser[IndexedSeq[U]] = {
-      rep(rep1(vp) ~ opt("-" ~> name) ^^ {case (v ~ t) => v.map(lift(_,t)).toIndexedSeq}) ^^ {_.toIndexedSeq.flatten}
+    def typedList[T, U](vp: Parser[T], lift: (T,String)=>U, defaultType: String="object"): Parser[IndexedSeq[U]] = {
+      rep(rep1(vp) ~ opt("-" ~> name) ^^ {case (v ~ t) => v.map(lift(_,t.getOrElse("number"))).toIndexedSeq}) ^^ {_.toIndexedSeq.flatten}
     }
 
 
-    def addResultType(f: Function, name: Option[String]):Function = name.foldLeft(f)( (f, nm) => f.copy(resultType = nm))
+    def addResultType(f: Function, name: String):Function = f.copy(resultType = name)
 
 
   }
@@ -313,7 +328,7 @@ object PDDL {
   trait LispTokens { this: RegexParsers =>
     val name:Parser[String] =  """[a-zA-Z_@~%!=#<>\+\*\^\&\-][0-9a-zA-Z_@~%!=#<>\+\*\^\&\-]*""".r
     val variable:Parser[String] =  "?" ~> name
-    val number:Parser[Number] =  "[0-9]+".r ^^ { x => Number(x.replace("\\.","").toInt)}
+    val number:Parser[Number] =  "[0-9]+".r ^^ { x => Number(x.replace("\\.","").toDouble)}
     lazy val lParen: Parser[String] = "("
     lazy val rParen: Parser[String] = ")"
     lazy val lBrack: Parser[String] = "["

@@ -71,12 +71,6 @@ class PDDLTest extends FunSuite {
 
   test("read in action") {
     import PDDL.DomainReader._
-    parse(surround(assign_op ~ fterm ~ fexp),
-      " (decrease (battery-amount ?rover) 8)"
-    ) match {
-      case PDDL.DomainReader.Success(a, _) =>
-      case PDDL.DomainReader.Failure(a, _) => throw new RuntimeException(a)
-    }
     PDDL.DomainReader.parse(PDDL.DomainReader.action,
       """ (:action move
       :parameters

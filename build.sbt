@@ -13,7 +13,8 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "junit" % "junit" % "4.5" % "test"
+  "junit" % "junit" % "4.5" % "test",
+  "org.scalanlp" %% "breeze-process" % "0.2-SNAPSHOT"
 )
 
 libraryDependencies <<= (scalaVersion, libraryDependencies) { (sv, deps) =>

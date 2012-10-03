@@ -11,3 +11,20 @@ project/plugins/project/
 
 # Scala-IDE specific
 .scala_dependencies
+target/
+gold
+guess
+cache/
+profiles/
+scripts/
+parsers/
+.idea
+lib_managed/
+tmp/
+*_managed
+*target
+.scala_dependencies
+.*.swp
+*.jar
+.idea*
+project/target/
