@@ -26,9 +26,11 @@ case class IndexedAction(name: String,
 
     val grounded = ArrayBuffer[GroundedAction]()
 
+
     for(list <- argLists) {
+      val context = state.makeContext(0 +: list)
       val holds = precondition.forall { p =>
-        p.holds(state, 0 +: list)
+        p.holds(state, context)
 
       }
       if(holds) {

@@ -7,11 +7,11 @@ import breeze.util.Index
 
 
 sealed trait IndexedEffect {
-  def updateState(state: State, context: EvalContext)
+  def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext)
 }
 
 object NoEffect extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {}
+  def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext) {}
 }
 
 object IndexedEffect {
@@ -45,43 +45,50 @@ object IndexedEffect {
           val rcell = Expression.fromValExp(rhs, refFunctions.index, valFunctions.index, varBindings, objs.index)
           AssignToResource(op, lcell.asInstanceOf[Expression.Resource],  rcell)
         }
+      case PDDL.TimedEffect(spec, arg) =>
+        val a = rec(arg, varBindings)
+        new TimedEffect(spec, a)
+      case PDDL.CondEffect(guard, arg) =>
+        val ig = IndexedCondition.fromCondition(guard, preds, refFunctions.index, valFunctions.index, varBindings, objs.index)
+        val a = rec(arg, varBindings)
+        new CondEffect(ig, a)
     }
     rec(effect, locals)
   }
 }
 
 case class EnableMultiple(preds: BitSet) extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {
+  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
     state.axioms |= preds
   }
 }
 
 case class DisableMultiple(preds: BitSet) extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {
+  def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext) {
     state.axioms &~= preds
   }
 }
 
 case class AndEffect(conjuncts: IndexedSeq[IndexedEffect]) extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {
-    conjuncts foreach (_.updateState(state, context))
+  def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext) {
+    conjuncts foreach (_.updateState(state, time, context))
   }
 }
 
 case class DisableDynamicPredicate(predicateId: Int, args: IndexedSeq[CellExpression]) extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {
+  def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext) {
     state.axioms -= state.problem.predicates.ground(predicateId, args.map(_.cell(context)))
   }
 }
 
 case class EnableDynamicPredicate(predicateId: Int, args: IndexedSeq[CellExpression]) extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {
+  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
     state.axioms += state.problem.predicates.ground(predicateId, args.map(_.cell(context)))
   }
 }
 
 case class AssignToResource(op: AssignOp, lhs: Resource, rhs: ValExpression) extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {
+  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
     val r = lhs.resource(context)
     val exp = rhs.resource(context)
     op match {
@@ -100,8 +107,23 @@ case class AssignToResource(op: AssignOp, lhs: Resource, rhs: ValExpression) ext
 }
 
 case class AssignToCell(lhs: Expression.Cell, rhs: CellExpression) extends IndexedEffect {
-  def updateState(state: State, context: EvalContext) {
+  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
     lhs.update(context, rhs.cell(context))
+  }
+}
+
+case class TimedEffect(time: PDDL.TimeSpecifier, arg: IndexedEffect) extends IndexedEffect {
+  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
+    if(this.time == time)
+      arg.updateState(state, time, context)
+  }
+}
+
+case class CondEffect(guard: IndexedCondition, arg: IndexedEffect) extends IndexedEffect {
+  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
+    if(guard.holds(state, context)) {
+      arg.updateState(state, time, context)
+    }
   }
 }
 

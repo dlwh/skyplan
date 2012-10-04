@@ -82,7 +82,7 @@ case class ProblemInstance(objects: GroundedObjects,
 
   def initialState: State = {
     val s = State(this, 0, HashVector.zeros[Double](refFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](valFuns.size max 1, -1))
-    initEffect.updateState(s, s.makeContext())
+    initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }
 

@@ -3,7 +3,7 @@ package dlwh.skyplan
 import java.io.StringReader
 
 /**
- *
+ * Data representation and parsing for PDDL.
  * @author dlwh
  */
 object PDDL {
@@ -116,7 +116,7 @@ object PDDL {
       require(op == Assign, "Can't " + op + " references!")
       val rexp = rhs match {
         case FApplication(name, args) => RApplication(name, args)
-        case _ => error("Type Error!")
+        case _ => throw new RuntimeException("Type Error: Can't assign to a reference from a " + rhs)
       }
       RefAssignEffect(RApplication(lhs.name, lhs.args), rexp)
     }
