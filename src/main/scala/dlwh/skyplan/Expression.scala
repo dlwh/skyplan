@@ -67,11 +67,11 @@ object CellExpression {
     case Name(x) =>
       val r = globals(x)
       if (r < 0) throw new ExpressionException("Unknown name " + x)
-      Global(r)
+      Global(r, x)
     case Var(x) =>
       val r = locals(x)
       if (r < 0) throw new ExpressionException("Unknown argument " + x)
-      Local(r)
+      Local(r, x)
     case RApplication(name, args) =>
       val fn = refFunctions(name)
       if (fn < 0) throw new ExpressionException("Unknown function " + fn)
@@ -101,12 +101,16 @@ object Expression {
   }
 
 
-  case class Global(x: Int) extends CellExpression {
+  case class Global(x: Int, name: String) extends CellExpression {
     def cell(context: EvalContext) = x
   }
 
-  case class Local(x: Int) extends CellExpression {
-    def cell(context: EvalContext) = context.local(x)
+  case class Local(x: Int, name: String) extends CellExpression {
+    def cell(context: EvalContext) = try {
+      context.local(x)
+    } catch {
+      case e: IndexOutOfBoundsException => throw new RuntimeException("bad indexing?!?!" + x + " " + name, e)
+    }
   }
 
   case class Number(x: Double) extends ValExpression {

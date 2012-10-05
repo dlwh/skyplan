@@ -10,7 +10,7 @@ import io.Source
  * @author dlwh
  */
 @RunWith(classOf[JUnitRunner])
-class ProblemInstanceTest  extends FunSuite {
+class AStarPlannerTest  extends FunSuite {
   def slurpResource(str: String) =  {
     Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
   }

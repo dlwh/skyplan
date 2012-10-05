@@ -13,7 +13,7 @@ import dlwh.skyplan.PDDL.Predicate
 import dlwh.skyplan.Expression.Resource
 
 case class State(problem: ProblemInstance,
-                 time: Double,
+                 var time: Double,
                  /** resources are grounded fluents with number domains */
                  resources: HashVector[Double],
                  /** axioms are grounded predicates */
@@ -21,8 +21,42 @@ case class State(problem: ProblemInstance,
                  /** bindings are for object-valued fluents and constants */
                  bindings: OpenAddressHashArray[Int],
                  pendingActions: mutable.PriorityQueue[GroundedAction] = mutable.PriorityQueue.empty[GroundedAction]) {
+
+  override val hashCode = {
+    (time,axioms).hashCode
+  }
+
   lazy val possibleActions = {
     problem.actions.flatMap(_.allPossibleGrounded(this))
+  }
+
+  lazy val endingState = {
+    val clone = copy
+    while(clone.pendingActions.nonEmpty) {
+      clone.elapseTime()
+    }
+  }
+
+  def applyAction(a: GroundedAction) {
+    require(a.completionTime >= time)
+    a.applyStart(this)
+    if(a.completionTime > time) {
+      pendingActions.enqueue(a)
+    }
+  }
+
+  def elapseTime(delta: Double = -1) {
+    val newTime = if(delta > 0) time + delta else (pendingActions.head.completionTime)
+
+    while(pendingActions.head.completionTime < newTime) {
+      pendingActions.dequeue().applyEnd(this)
+    }
+
+
+
+  }
+
+  private def primitiveApply(a: GroundedAction) = {
   }
 
 
@@ -32,7 +66,9 @@ case class State(problem: ProblemInstance,
 
 
   def makeContext(locals: IndexedSeq[Int] = IndexedSeq.empty): EvalContext = new EvalContext {
-    def local(i: Int): Int = locals(i)
+    def local(i: Int): Int = {
+      locals(i)
+    }
 
     def resource(fn: Int, args: IndexedSeq[Int]): Double = {
       resources(problem.refFuns.ground(fn, args))
@@ -74,6 +110,7 @@ case class ProblemInstance(objects: GroundedObjects,
                            refFuns: Grounding,
                            valFuns: Grounding,
                            metricExp: ValExpression,
+                           goal: IndexedCondition,
                            initEffect: IndexedEffect) {
 
   def metric(s: State) = {
@@ -115,16 +152,6 @@ case class Grounding(index: Index[String],
 object ProblemInstance {
 
 
-  def indexActions(map: Map[String, Action], objs: GroundedObjects, props: Grounding, resources: Grounding, vars: Grounding) = {
-    for( (name, a) <- map.toIndexedSeq) yield {
-      IndexedAction.fromAction(a, objs, props, resources, vars)
-
-
-    }
-  }
-
-
-
   def fromPDDL(domain: Domain,
                problem: Problem) = {
     // "object" is common root type.
@@ -139,7 +166,7 @@ object ProblemInstance {
     val actions = indexActions(domain.actions, objs, propositions, resources, vars)
 
     val metric = problem.metric.map{ case PDDL.MetricSpec(dir, exp) =>
-      val base = Expression.fromValExp(exp, vars.index, resources.index, Index[String](), objs.index)
+      val base = Expression.fromValExp(exp, vars.index, resources.index, standardLocals, objs.index)
       if(dir == PDDL.Maximize)
         Expression.Negation(base)
       else
@@ -147,9 +174,16 @@ object ProblemInstance {
     }.getOrElse(Expression.Number(0))
 
     val init = IndexedEffect.fromEffect(problem.initialState, Index[String](), objs, vars, resources, propositions)
+    val goal = IndexedCondition.fromCondition(problem.goal, propositions, vars.index, resources.index, Index[String](), objs.index)
 
-    new ProblemInstance(objs, propositions, actions, vars, resources, metric, init)
+    new ProblemInstance(objs, propositions, actions, vars, resources, metric, goal, init)
 
+  }
+
+  def indexActions(map: Map[String, Action], objs: GroundedObjects, props: Grounding, resources: Grounding, vars: Grounding) = {
+    for( (name, a) <- map.toIndexedSeq) yield {
+      IndexedAction.fromAction(a, Index[String](), objs, props, resources, vars)
+    }
   }
 
 

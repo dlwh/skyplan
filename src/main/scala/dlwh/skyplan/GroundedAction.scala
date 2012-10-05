@@ -9,12 +9,20 @@ case class GroundedAction(ungrounded: IndexedAction,
      Iterator(ungrounded.name, argAssignments, completionTime).mkString("GroundedAction(",", ",")")
   }
 
+  def applyStart(state: State) {
+    ungrounded.effect.updateState(state, PDDL.Start, state.makeContext(argAssignments))
+  }
+
+  def applyEnd(state: State) {
+    ungrounded.effect.updateState(state, PDDL.End, state.makeContext(argAssignments))
+  }
+
 }
 
 object GroundedAction {
   implicit val ordering = new Ordering[GroundedAction] {
     def compare(x: GroundedAction, y: GroundedAction): Int = {
-      (x.completionTime - y.completionTime).toInt
+      -(x.completionTime - y.completionTime).toInt
     }
   }
 }

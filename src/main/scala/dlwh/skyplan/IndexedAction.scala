@@ -2,18 +2,18 @@ package dlwh.skyplan
 
 import breeze.util.Index
 import collection.mutable.ArrayBuffer
+import javax.xml.datatype.Duration
 
 case class IndexedAction(name: String,
                          // args by type.
                          signature: IndexedSeq[Int],
                          precondition: Option[IndexedCondition],
-                         startEffect: IndexedEffect,
-                         endEffect: IndexedEffect,
+                         effect: IndexedEffect,
                          duration: Option[ValExpression]) {
 
   def ground(state: State,
              args: IndexedSeq[Int]) = {
-    GroundedAction(this, args, duration.map(_.resource(state.makeContext(args))).getOrElse(0.0))
+    GroundedAction(this, args, state.time + duration.map(_.resource(state.makeContext(args))).getOrElse(0.0))
   }
 
   def allPossibleGrounded(state: State) = {
@@ -47,6 +47,7 @@ case class IndexedAction(name: String,
 
 object IndexedAction {
   def fromAction(a: PDDL.Action,
+                 standardLocals: Index[String],
                  objs: GroundedObjects,
                  props: Grounding,
                  resources: Grounding,
@@ -60,6 +61,6 @@ object IndexedAction {
 
     val effect = a.effect.map(IndexedEffect.fromEffect(_, locals, objs, vars, resources, props)).getOrElse(NoEffect)
 
-    new IndexedAction(a.name, a.args.map(a => objs.types(a.tpe)), prec, effect, NoEffect, duration)
+    new IndexedAction(a.name, a.args.map(a => objs.types(a.tpe)), prec, effect, duration)
   }
 }
