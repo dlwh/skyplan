@@ -22,7 +22,7 @@ class AStarPlannerTest  extends FunSuite {
     val domain = PDDL.parseDomain(input2)
 
     val instance = ProblemInstance.fromPDDL(domain, problem)
-    instance.initialState
+    println(AStarPlanner.findPlan(instance))
   }
 
 }
