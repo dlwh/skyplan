@@ -74,8 +74,10 @@ object PDDL {
   sealed trait RefExp
   case class Name(name: String) extends RefExp
   case class Var(name: String) extends RefExp
-  case class FApplication(name: String, args: IndexedSeq[RefExp] = IndexedSeq.empty) extends ValExp
   case class RApplication(name: String, args: IndexedSeq[RefExp] = IndexedSeq.empty) extends RefExp
+
+  case object DurationReference extends ValExp
+  case class FApplication(name: String, args: IndexedSeq[RefExp] = IndexedSeq.empty) extends ValExp
   case class Number(num: Double) extends ValExp
   case class BinaryExp(op: BinaryOp, lhs: ValExp, rhs: ValExp) extends ValExp
   case class MultiExp(op: MultiOp, args: IndexedSeq[ValExp]) extends ValExp
@@ -134,6 +136,7 @@ object PDDL {
 
 
   import scala.util.parsing.combinator.{ RegexParsers, JavaTokenParsers }
+
 
   object DomainReader extends RegexParsers with JavaTokenParsers with LispTokens {
     lazy val domain:Parser[Domain] = fn("define")(
@@ -194,7 +197,7 @@ object PDDL {
     )
 
     lazy val timed_effect = (
-      fn("at")(time_spec ~ effect) ^^ { case (ts ~ eff) => TimedEffect(ts, eff)}
+      fn("at")(time_spec ~ commit(effect)) ^^ { case (ts ~ eff) => TimedEffect(ts, eff)}
       )
 
 
@@ -214,16 +217,16 @@ object PDDL {
       )
 
     lazy val gd: Parser[Condition] =  (
-      atomic_pred
+      timed_gd
       | fn("exists")(surround(varList) ~ gd) ^^ {case (vars ~ con) => ExistentialCondition(vars, con)}
       | fn("forall")(surround(varList) ~ gd) ^^ {case (vars ~ con) => UniversalCondition(vars, con)}
       | rcomp
       | fcomp
-      | timed_gd
+      | atomic_pred
     )
 
     lazy val timed_gd: Parser[Condition] = (
-      fn("at")(time_spec ~ gd) ^^ { case (ts ~ gd) => TimedCondition(ts, gd)}
+      fn("at")(time_spec ~ commit(gd)) ^^ { case (ts ~ gd) => TimedCondition(ts, gd)}
         | fn("over")("all" ~> gd) ^^ { ContinuousCondition(_)}
       )
 
@@ -246,12 +249,15 @@ object PDDL {
         | surround(binary_op ~ fexp ~ fexp) ^^ {case (a ~ b ~ c) => BinaryExp(a,b,c)}
       | '-' ~> fexp ^^ { Negation(_)}
       | fterm(FApplication(_,_))
+      | duration_ref
     )
 
     lazy val duration_constraint = emptyOr(simple_duration_constraint)
     lazy val simple_duration_constraint = {
-      surround(binary_comp ~ "?duration" ~ fexp) ^^ {case op ~ _ ~ fexp => StandardDuration(op, fexp)}
+      surround(binary_comp ~ duration_ref ~ fexp) ^^ {case op ~ _ ~ fexp => StandardDuration(op, fexp)}
     }
+
+    lazy val duration_ref = "?duration" ^^^  DurationReference
 
     // problem stuff
     lazy val problem = fn("define")(
@@ -312,7 +318,7 @@ object PDDL {
 
 
     def typedList[T, U](vp: Parser[T], lift: (T,String)=>U, defaultType: String="object"): Parser[IndexedSeq[U]] = {
-      rep(rep1(vp) ~ opt("-" ~> name) ^^ {case (v ~ t) => v.map(lift(_,t.getOrElse("number"))).toIndexedSeq}) ^^ {_.toIndexedSeq.flatten}
+      rep(rep1(vp) ~ opt("-" ~> name) ^^ {case (v ~ t) => v.map(lift(_,t.getOrElse(defaultType))).toIndexedSeq}) ^^ {_.toIndexedSeq.flatten}
     }
 
 
@@ -326,7 +332,7 @@ object PDDL {
 
 
   trait LispTokens { this: RegexParsers =>
-    val name:Parser[String] =  """[a-zA-Z_@~%!=#<>\+\*\^\&\-][0-9a-zA-Z_@~%!=#<>\+\*\^\&\-]*""".r
+    val name:Parser[String] =  """[a-zA-Z_@~%!=#<>\+\^\&\-][0-9a-zA-Z_@~%!=#<>\+\*\^\&\-]*""".r
     val variable:Parser[String] =  "?" ~> name
     val number:Parser[Number] =  "[0-9]+".r ^^ { x => Number(x.replace("\\.","").toDouble)}
     lazy val lParen: Parser[String] = "("

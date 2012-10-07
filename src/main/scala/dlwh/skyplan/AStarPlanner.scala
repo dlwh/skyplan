@@ -9,6 +9,7 @@ import dlwh.search.AStarSearch
 object AStarPlanner {
   def findPlan(inst: ProblemInstance) = {
     def succ(s: State) = {
+      println(s)
       s.possibleActions.map { a =>
         val c = s.copy
         c.applyAction(a)

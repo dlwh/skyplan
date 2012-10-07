@@ -56,9 +56,6 @@ case class State(problem: ProblemInstance,
 
   }
 
-  private def primitiveApply(a: GroundedAction) = {
-  }
-
 
   def copy: State = {
     State(problem, time, resources.copy, axioms.clone(), bindings.copy, pendingActions.clone())
@@ -95,6 +92,8 @@ case class State(problem: ProblemInstance,
     sb ++= "time=" + time + ", "
     sb ++= "resources=" + Encoder.fromIndex(problem.refFuns.groundedByName).decode(resources).toString +",\n "
     sb ++= "axioms=" + axioms.map(problem.predicates.groundedByName.get _).toString +",\n"
+    sb ++= "pending=" + pendingActions+"\n"
+    sb ++= ")"
 
     sb.toString
   }
@@ -121,6 +120,10 @@ case class ProblemInstance(objects: GroundedObjects,
     val s = State(this, 0, HashVector.zeros[Double](refFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](valFuns.size max 1, -1))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
+  }
+
+  def groundedAction(state: State, name: String, args: String*) = {
+    actions.find(_.name== name).get.ground(state, args.map(objects.index).toIndexedSeq)
   }
 
 
@@ -166,7 +169,7 @@ object ProblemInstance {
     val actions = indexActions(domain.actions, objs, propositions, resources, vars)
 
     val metric = problem.metric.map{ case PDDL.MetricSpec(dir, exp) =>
-      val base = Expression.fromValExp(exp, vars.index, resources.index, standardLocals, objs.index)
+      val base = Expression.fromValExp(exp, vars.index, resources.index, Index[String](), objs.index)
       if(dir == PDDL.Maximize)
         Expression.Negation(base)
       else

@@ -112,7 +112,7 @@ class PDDLTest extends FunSuite {
 
   test("Read in time rover domain") {
     val input = slurpResource("examples/rover/time/domain.pddl")
-    PDDL.parseDomain(input)
+    println(PDDL.parseDomain(input))
   }
 
 

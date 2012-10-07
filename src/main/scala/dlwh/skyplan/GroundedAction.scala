@@ -4,6 +4,10 @@ package dlwh.skyplan
 case class GroundedAction(ungrounded: IndexedAction,
                           argAssignments: IndexedSeq[Int],
                           completionTime: Double) {
+  def canExecute(state: State) = {
+    ungrounded.precondition.forall(_.holds(state, state.makeContext(argAssignments)))
+  }
+
 
   override def toString = {
      Iterator(ungrounded.name, argAssignments, completionTime).mkString("GroundedAction(",", ",")")
