@@ -15,6 +15,7 @@ class AStarPlannerTest  extends FunSuite {
     Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
   }
 
+  /*
   test("Strips Rover") {
     val input = slurpResource("examples/rover/strips/problem.pddl")
     val input2 = slurpResource("examples/rover/strips/domain.pddl")
@@ -27,6 +28,7 @@ class AStarPlannerTest  extends FunSuite {
     val plan = AStarPlanner.findPlan(instance)
     assert(plan.nonEmpty,plan)
   }
+  */
 
 
 }

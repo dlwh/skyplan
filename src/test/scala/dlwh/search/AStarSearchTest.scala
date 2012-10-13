@@ -20,7 +20,7 @@ class AStarSearchTest extends FunSuite {
       'e -> IndexedSeq('g -> 2.0)
     )
 
-    def succ(a: Symbol) = {
+    def succ(a: Symbol, x: Double) = {
       costs(a).map{ case (s, c) => (s, (), c)}
     }
 

@@ -155,7 +155,7 @@ object PDDL {
     }
 
 
-    lazy val types = field("types")(typeList)
+    lazy val types = field("types")(commit(typeList))
     lazy val constants = field("constants")(argList)
     lazy val predicates = field("predicates")(rep(predicate)) ^^ {_.toMap}
     lazy val functions = field("functions")(typedList(function, addResultType _, "number") ) ^^ {functions => functions.map(f => f.name -> f).toMap}
@@ -185,11 +185,11 @@ object PDDL {
     lazy val precondition: Parser[Option[Condition]]  = sym("precondition") ~> emptyOr(pre_gd)
 
     lazy val effect:Parser[Effect] = (
-       surround("=" ~ fterm(RApplication(_,_)) ~ term) ^^ { case a ~ b ~ c=> RefAssignEffect(b,c)}
+       surround( ("=" | "assign") ~ fterm(RApplication(_,_)) ~ term) ^^ { case a ~ b ~ c=> RefAssignEffect(b,c)}
          // note that this assignment can be
-      | surround(assign_op ~ commit(fterm(FApplication(_,_))) ~ fexp) ^^ { case a ~ b ~ c=> AssignEffect(a,b,c)}
+      | surround(assign_op ~ commit(fterm(FApplication(_,_))) ~ commit(fexp)) ^^ { case a ~ b ~ c=> AssignEffect(a,b,c)}
       | fn("and")(rep(effect)) ^^ {list => AndEffect(list.toIndexedSeq)}
-      | fn("forall")(varList ~ effect) ^^ { case  list~eff => UniversalEffect(list, eff)}
+      | fn("forall")(commit(surround(varList)) ~ effect) ^^ { case  list~eff => UniversalEffect(list, eff)}
       | fn("when")(gd ~ effect) ^^ { case  gd~eff => CondEffect(gd, eff)}
       | fn("not")(atomic_pred) ^^ {DisablePred(_)}
       | timed_effect
@@ -314,7 +314,7 @@ object PDDL {
 
     lazy val argList = typedList(name, Argument(_:String, _: String))
     lazy val varList = typedList(variable, Argument(_:String, _:String))
-    lazy val typeList = typedList(variable, Type(_:String, _: String))
+    lazy val typeList = typedList(name, Type(_:String, _: String))
 
 
     def typedList[T, U](vp: Parser[T], lift: (T,String)=>U, defaultType: String="object"): Parser[IndexedSeq[U]] = {
@@ -332,6 +332,7 @@ object PDDL {
 
 
   trait LispTokens { this: RegexParsers =>
+    protected override val whiteSpace = """(\s|;;.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
     val name:Parser[String] =  """[a-zA-Z_@~%!=#<>\+\^\&\-][0-9a-zA-Z_@~%!=#<>\+\*\^\&\-]*""".r
     val variable:Parser[String] =  "?" ~> name
     val number:Parser[Number] =  "[0-9]+".r ^^ { x => Number(x.replace("\\.","").toDouble)}

@@ -13,7 +13,7 @@ case class IndexedAction(name: String,
 
   def ground(state: State,
              args: IndexedSeq[Int]) = {
-    GroundedAction(this, args, state.time + duration.map(_.resource(state.makeContext(args))).getOrElse(0.0))
+    GroundedAction(this, args, state.time + duration.map(_.valueWith(state.makeContext(args))).getOrElse(0.0))
   }
 
   def allPossibleGrounded(state: State) = {

@@ -43,7 +43,7 @@ case class AndCondition(conjuncts: IndexedSeq[IndexedCondition]) extends Indexed
 
 case class BinaryCompCondition(op: BinaryComp, lhs: ValExpression, rhs: ValExpression) extends IndexedCondition {
   def holds(s: State, context: EvalContext): Boolean = {
-    op(lhs.resource(context), rhs.resource(context))
+    op(lhs.valueWith(context), rhs.valueWith(context))
   }
 }
 

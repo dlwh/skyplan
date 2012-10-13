@@ -89,8 +89,8 @@ case class EnableDynamicPredicate(predicateId: Int, args: IndexedSeq[CellExpress
 
 case class AssignToResource(op: AssignOp, lhs: Resource, rhs: ValExpression) extends IndexedEffect {
   def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
-    val r = lhs.resource(context)
-    val exp = rhs.resource(context)
+    val r = lhs.valueWith(context)
+    val exp = rhs.valueWith(context)
     op match {
       case Assign =>
         lhs.update(context, exp)

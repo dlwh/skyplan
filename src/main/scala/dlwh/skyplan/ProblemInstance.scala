@@ -14,6 +14,7 @@ import dlwh.skyplan.Expression.Resource
 
 case class State(problem: ProblemInstance,
                  var time: Double,
+                 var planLength: Int,
                  /** resources are grounded fluents with number domains */
                  resources: HashVector[Double],
                  /** axioms are grounded predicates */
@@ -58,7 +59,7 @@ case class State(problem: ProblemInstance,
 
 
   def copy: State = {
-    State(problem, time, resources.copy, axioms.clone(), bindings.copy, pendingActions.clone())
+    State(problem, time, planLength, resources.copy, axioms.clone(), bindings.copy, pendingActions.clone())
   }
 
 
@@ -113,11 +114,11 @@ case class ProblemInstance(objects: GroundedObjects,
                            initEffect: IndexedEffect) {
 
   def metric(s: State) = {
-    metricExp.resource(s.makeContext(IndexedSeq()))
+    metricExp.valueWith(s.makeContext(IndexedSeq()))
   }
 
   def initialState: State = {
-    val s = State(this, 0, HashVector.zeros[Double](refFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](valFuns.size max 1, -1))
+    val s = State(this, 0, 0, HashVector.zeros[Double](refFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](valFuns.size max 1, -1))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }

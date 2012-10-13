@@ -9,13 +9,13 @@ import collection.mutable
  */
 object AStarSearch {
   def search[T, Action](init: T,
-                successors: T=>IndexedSeq[(T, Action, Double)],
+                successors: (T,Double)=>IndexedSeq[(T, Action, Double)],
                 isGoal: T=>Boolean,
                 h: T=>Double = ( (x:T) => 0.0),
                 treeSearch: Boolean = false):Option[(Path[T, Action], Double)] = {
     case class State(path: Path[T, Action], cost: Double, heur: Double) {
       def t = path.head
-      def next = successors(path.head)
+      def next = successors(path.head, cost)
 
       def estimate = cost + heur
     }
@@ -29,6 +29,7 @@ object AStarSearch {
     while(queue.nonEmpty) {
       val cur = queue.dequeue()
       val t = cur.t
+      println(cur.estimate)
 
       if(isGoal(t)) {
         return Some(cur.path.reverse -> cur.cost)
@@ -37,7 +38,7 @@ object AStarSearch {
       if(!treeSearch)
         visited += t
 
-      for( (s,a,c) <- successors(t)) {
+      for( (s,a,c) <- cur.next) {
         if(treeSearch || !visited(s))
           queue += State(cur.path.prepend(s, a), c + cur.cost, h(s))
       }

@@ -54,7 +54,7 @@ sealed trait CellExpression {
 
 
 sealed trait ValExpression {
-  def resource(context: EvalContext):Double
+  def valueWith(context: EvalContext):Double
 }
 
 import Expression._
@@ -114,11 +114,11 @@ object Expression {
   }
 
   case class Number(x: Double) extends ValExpression {
-    def resource(context: EvalContext): Double = x
+    def valueWith(context: EvalContext): Double = x
   }
 
   case class Resource(fn: Int, args: IndexedSeq[CellExpression]) extends ValExpression {
-    def resource(context: EvalContext) = context.resource(fn, args.map(a => a.cell(context)))
+    def valueWith(context: EvalContext) = context.resource(fn, args.map(a => a.cell(context)))
     def update(context: EvalContext, v: Double) = context.updateResource(fn, args.map(a => a.cell(context)), v)
   }
 
@@ -136,16 +136,16 @@ object Expression {
   }
 
   case class Binary(op: BinaryOp, lhs: ValExpression, rhs: ValExpression) extends ValExpression {
-    def resource(context: EvalContext): Double = op(lhs.resource(context),rhs.resource(context))
+    def valueWith(context: EvalContext): Double = op(lhs.valueWith(context),rhs.valueWith(context))
   }
 
   case class Multi(op: MultiOp, args: IndexedSeq[ValExpression]) extends ValExpression {
 
-    def resource(context: EvalContext) = op(args.map(a => a.resource(context)))
+    def valueWith(context: EvalContext) = op(args.map(a => a.valueWith(context)))
   }
 
   case class Negation(arg: ValExpression) extends ValExpression {
-    def resource(context: EvalContext) = -arg.resource(context)
+    def valueWith(context: EvalContext) = -arg.valueWith(context)
   }
 
   case class ExpressionException(msg: String) extends Exception(msg)
