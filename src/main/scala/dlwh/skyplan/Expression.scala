@@ -14,7 +14,8 @@ trait EvalContext { outer =>
   def resource(fn: Int, args: IndexedSeq[Int]): Double
   def cell(fn: Int, args: IndexedSeq[Int]): Int
 
-  def numLocals: Int = 0
+  def numLocals: Int
+
 
   def updateResource(fn: Int, args: IndexedSeq[Int], v: Double)
   def updateCell(fn: Int, args: IndexedSeq[Int], v: Int)
@@ -32,6 +33,9 @@ trait EvalContext { outer =>
         bindings(i - outer.numLocals)
       }
     }
+
+
+    def numLocals: Int = outer.numLocals + bindings.length
 
     def resource(fn: Int, args: IndexedSeq[Int]): Double = outer.resource(fn, args)
 
@@ -66,7 +70,7 @@ object CellExpression {
                globals: Index[String]):CellExpression = term match {
     case Name(x) =>
       val r = globals(x)
-      if (r < 0) throw new ExpressionException("Unknown name " + x)
+      if (r < 0) throw new ExpressionException("Unknown name " + x + " " + globals)
       Global(r, x)
     case Var(x) =>
       val r = locals(x)
@@ -87,8 +91,8 @@ object Expression {
                locals: Index[String],
                globals: Index[String]):ValExpression = fexp match {
     case FApplication(name, args) =>
-      val fn = refFunctions(name)
-      if (fn < 0) throw new ExpressionException("Unknown function " + fn)
+      val fn = valFunctions(name)
+      if (fn < 0) throw new ExpressionException("Unknown function " + name)
       Resource(fn, args.map(CellExpression.fromRefExp(_, refFunctions, locals, globals)))
     case BinaryExp(op, lhs, rhs) =>
       Binary(op, fromValExp(lhs, refFunctions, valFunctions, locals, globals), fromValExp(rhs, refFunctions, valFunctions, locals, globals))

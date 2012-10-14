@@ -68,8 +68,16 @@ case class State(problem: ProblemInstance,
       locals(i)
     }
 
+
+    def numLocals: Int = locals.length
+
     def resource(fn: Int, args: IndexedSeq[Int]): Double = {
-      resources(problem.refFuns.ground(fn, args))
+      try {
+        resources(problem.valFuns.ground(fn, args))
+      } catch {
+        case e:Exception =>
+        throw new RuntimeException("Index Problem " + problem.valFuns.groundings(fn).map(problem.valFuns.groundedByName.get _) + "\n" + problem.valFuns.index.get(fn) + " " + args.map(problem.objects.index.get _))
+      }
     }
 
     def cell(fn: Int, args: IndexedSeq[Int]): Int = {
@@ -118,7 +126,7 @@ case class ProblemInstance(objects: GroundedObjects,
   }
 
   def initialState: State = {
-    val s = State(this, 0, 0, HashVector.zeros[Double](refFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](valFuns.size max 1, -1))
+    val s = State(this, 0, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](refFuns.size max 1, -1))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }
@@ -131,7 +139,15 @@ case class ProblemInstance(objects: GroundedObjects,
 }
 
 
-case class GroundedObjects(types: Index[String], index: Index[String], instancesByType: Array[BitSet])
+case class GroundedObjects(types: Index[String], index: Index[String], instancesByType: Array[BitSet]) {
+  def allGroundingsOfArgumentTypes(seq: IndexedSeq[String]) = {
+    val tpes = seq.map(types).map(instancesByType)
+    tpes.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
+      for(list <- acc; o <- objs) yield list :+ o
+    }
+
+  }
+}
 
 case class Grounding(index: Index[String],
                      groundedByName: Index[String],
@@ -148,7 +164,9 @@ case class Grounding(index: Index[String],
       groundings(predicate)(args.foldLeft(0)(_ * objects.size + _))
     }
   }
-  def isAtomic(predicate: Int) = groundings(predicate).length == 1
+  def isAtomic(functionOrPredicate: Int) = groundings(functionOrPredicate).length == 1
+
+
 }
 
 
@@ -160,7 +178,7 @@ object ProblemInstance {
                problem: Problem) = {
     // "object" is common root type.
     val types = Index[String](Iterator("object", "number") ++ domain.types.flatMap(t => Iterator(t.name,t.parent)))
-    val objects = Index[String](problem.objects.map(_.name))
+    val objects = Index[String](domain.constants.map(_.name) ++ problem.objects.map(_.name))
     // Type -> (objects that are that type)
     val instancesByType: Array[BitSet] = populateTypeSets(problem, domain, types, objects)
     val objs = GroundedObjects(types, objects, instancesByType)
@@ -235,17 +253,17 @@ object ProblemInstance {
       f.resultType match {
         case "number" =>
           val fi = numericIndex.index(name)
-          groundingsN(fi) = groundFluent(objs, f, grndNumByName)
+          groundingsN += groundFluent(objs, f, grndNumByName)
         case _ =>
           val fi = variableIndex.index(name)
-          groundingsV(fi) = groundFluent(objs, f, grndVarByName)
+          groundingsV += groundFluent(objs, f, grndVarByName)
 
       }
 
     }
 
     val nums = Grounding(numericIndex, grndNumByName, groundingsN.toArray, objs.index)
-    val vars = Grounding(numericIndex, grndNumByName, groundingsN.toArray, objs.index)
+    val vars = Grounding(variableIndex, grndVarByName, groundingsV.toArray, objs.index)
 
     (nums, vars)
   }
@@ -253,17 +271,18 @@ object ProblemInstance {
 
   def groundFluent(objs: GroundedObjects, f: PDDL.Function, groundedIndex: MutableIndex[String]): Array[Int] = {
     import objs._
-    val arr = Array.fill[Int](index.size * f.args.length)(-1)
-    val intArgs = f.args.foldLeft(IndexedSeq(IndexedSeq.empty[Int])) {
-      (acc, nextArg) =>
+    val arr = Array.fill[Int](math.pow(index.size,f.args.length).toInt max 1)(-3)
+    val intArgs = f.args.foldLeft(IndexedSeq(IndexedSeq.empty[Int])) { (acc, nextArg) =>
         for (soFar <- acc; a <- instancesByType(types(nextArg.tpe))) yield soFar :+ a
     }
+
 
     for (instance <- intArgs) {
       val key = instance.foldLeft(0)(_ * index.size + _)
       assert(key >= 0, "Too many objects.... gonna have to rethink your indexing...")
       val groundedName = instance.map(index.get(_)).mkString("(" + f.name + " " , " ", ")")
       val ind = groundedIndex.index(groundedName)
+      assert(ind != -1)
 
       arr(key) = ind
     }
@@ -273,7 +292,7 @@ object ProblemInstance {
   def populateTypeSets(problem: PDDL.Problem, domain: PDDL.Domain, types: Index[String], objects: Index[String]): Array[BitSet] = {
 
     val arr = Encoder.fromIndex(types).fillArray(new mutable.BitSet)
-    for (o <- problem.objects) {
+    for (o <- problem.objects ++ domain.constants) {
       val i = objects(o.name)
       val t = types(o.tpe)
       assert(t > -1, types + " " + o.tpe)

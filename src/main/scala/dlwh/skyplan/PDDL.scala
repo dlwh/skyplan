@@ -115,7 +115,7 @@ object PDDL {
   case class RefAssignEffect(lhs: RApplication, rhs: RefExp) extends PrimEffect
   case class AssignEffect(op: AssignOp, lhs: FApplication, rhs: ValExp) extends PrimEffect {
     def toRefAssignEffect = {
-      require(op == Assign, "Can't " + op + " references!")
+      require(op == Assign, "Can't " + op + " references!" + " while converting " + this)
       val rexp = rhs match {
         case FApplication(name, args) => RApplication(name, args)
         case _ => throw new RuntimeException("Type Error: Can't assign to a reference from a " + rhs)
@@ -333,7 +333,7 @@ object PDDL {
 
   trait LispTokens { this: RegexParsers =>
     protected override val whiteSpace = """(\s|;;.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
-    val name:Parser[String] =  """[a-zA-Z_@~%!=#<>\+\^\&\-][0-9a-zA-Z_@~%!=#<>\+\*\^\&\-]*""".r
+    val name:Parser[String] =  """[a-zA-Z_@~%!=#<>\+\^\&][0-9a-zA-Z_@~%!=#<>\+\*\^\&\-]*""".r
     val variable:Parser[String] =  "?" ~> name
     val number:Parser[Number] =  "[0-9]+".r ^^ { x => Number(x.replace("\\.","").toDouble)}
     lazy val lParen: Parser[String] = "("

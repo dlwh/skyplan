@@ -14,21 +14,28 @@ object IndexedCondition {
                  valFunctions: Index[String],
                  locals: Index[String],
                  globals: Index[String]):IndexedCondition = {
-    def rec(cond: PDDL.Condition, varBindings: Index[String]):IndexedCondition =  cond match {
-      case PDDL.AndCondition(conjuncts) =>
-        AndCondition(conjuncts.map(rec(_, varBindings)))
-      case PDDL.FComp(comp, arg1, arg2) =>
-        BinaryCompCondition(comp,
-          Expression.fromValExp(arg1, refFunctions, valFunctions, varBindings, globals),
-          Expression.fromValExp(arg2, refFunctions, valFunctions, varBindings, globals))
-      case PDDL.RComp(arg1, arg2) =>
-        CellEqualCondition(
-          CellExpression.fromRefExp(arg1, refFunctions, varBindings, globals),
-          CellExpression.fromRefExp(arg2, refFunctions, varBindings, globals))
-      case PDDL.Pred(name, args) =>
-        val predIndex = preds.index(name)
-        PredicateCondition(predIndex, args.map(CellExpression.fromRefExp(_, refFunctions, varBindings, globals)))
+    def rec(cond: PDDL.Condition, varBindings: Index[String]):IndexedCondition =  {
+      try {
+        cond match {
+          case PDDL.AndCondition(conjuncts) =>
+            AndCondition(conjuncts.map(rec(_, varBindings)))
+          case PDDL.FComp(comp, arg1, arg2) =>
+            BinaryCompCondition(comp,
+              Expression.fromValExp(arg1, refFunctions, valFunctions, varBindings, globals),
+              Expression.fromValExp(arg2, refFunctions, valFunctions, varBindings, globals))
+          case PDDL.RComp(arg1, arg2) =>
+            CellEqualCondition(
+              CellExpression.fromRefExp(arg1, refFunctions, varBindings, globals),
+              CellExpression.fromRefExp(arg2, refFunctions, varBindings, globals))
+          case PDDL.Pred(name, args) =>
+            val predIndex = preds.index(name)
+            PredicateCondition(predIndex, args.map(CellExpression.fromRefExp(_, refFunctions, varBindings, globals)))
 
+        }
+      } catch {
+        case e: Exception =>
+          throw new RuntimeException("While handling " + cond, e)
+      }
     }
 
     rec(cond, locals)

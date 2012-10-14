@@ -30,5 +30,23 @@ class AStarPlannerTest  extends FunSuite {
   }
   */
 
+  test("Settlers 1") {
+    val input = slurpResource("examples/pddl/settlers/domain.pddl")
+    val input2 = slurpResource("examples/pddl/settlers/pfile1")
+    val domain = PDDL.parseDomain(input)
+    val problem = PDDL.parseProblem(input2)
 
+
+    try {
+
+      val instance = ProblemInstance.fromPDDL(domain, problem)
+      val init = instance.initialState
+      val plan = AStarPlanner.findPlan(instance)
+      assert(plan.nonEmpty,plan)
+    } catch {
+      case e =>
+        e.printStackTrace()
+      throw e
+    }
+  }
 }

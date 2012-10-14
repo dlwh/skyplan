@@ -38,13 +38,16 @@ object IndexedEffect {
         AssignToCell(lcell,  rcell)
       case ae@AssignEffect(op, lhs, rhs) =>
         val ri = refFunctions.index(lhs.name)
-        if(ri != 0) {
+        if(ri >= 0) {
           rec(ae.toRefAssignEffect, varBindings)
         } else {
           val lcell = Expression.fromValExp(lhs, refFunctions.index, valFunctions.index, varBindings, objs.index)
           val rcell = Expression.fromValExp(rhs, refFunctions.index, valFunctions.index, varBindings, objs.index)
           AssignToResource(op, lcell.asInstanceOf[Expression.Resource],  rcell)
         }
+      case PDDL.UniversalEffect(args, eff) =>
+        val extended = Index(varBindings ++ args.map(_.name))
+        UniversalEffect(objs.allGroundingsOfArgumentTypes(args.map(_.tpe)).map(_.toArray), rec(eff, extended))
       case PDDL.TimedEffect(spec, arg) =>
         val a = rec(arg, varBindings)
         new TimedEffect(spec, a)
@@ -123,6 +126,14 @@ case class CondEffect(guard: IndexedCondition, arg: IndexedEffect) extends Index
   def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
     if(guard.holds(state, context)) {
       arg.updateState(state, time, context)
+    }
+  }
+}
+
+case class UniversalEffect(objs: IndexedSeq[Array[Int]], arg: IndexedEffect) extends IndexedEffect {
+  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
+    for(list <- objs) {
+      arg.updateState(state, time, context.addLocals(list))
     }
   }
 }
