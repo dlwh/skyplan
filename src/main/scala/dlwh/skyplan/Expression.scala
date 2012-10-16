@@ -14,7 +14,8 @@ trait EvalContext { outer =>
   def resource(fn: Int, args: IndexedSeq[Int]): Double
   def cell(fn: Int, args: IndexedSeq[Int]): Int
 
-  def numLocals: Int = 0
+  def numLocals: Int
+
 
   def updateResource(fn: Int, args: IndexedSeq[Int], v: Double)
   def updateCell(fn: Int, args: IndexedSeq[Int], v: Int)
@@ -32,6 +33,9 @@ trait EvalContext { outer =>
         bindings(i - outer.numLocals)
       }
     }
+
+
+    def numLocals: Int = outer.numLocals + bindings.length
 
     def resource(fn: Int, args: IndexedSeq[Int]): Double = outer.resource(fn, args)
 
@@ -54,7 +58,7 @@ sealed trait CellExpression {
 
 
 sealed trait ValExpression {
-  def resource(context: EvalContext):Double
+  def valueWith(context: EvalContext):Double
 }
 
 import Expression._
@@ -66,7 +70,7 @@ object CellExpression {
                globals: Index[String]):CellExpression = term match {
     case Name(x) =>
       val r = globals(x)
-      if (r < 0) throw new ExpressionException("Unknown name " + x)
+      if (r < 0) throw new ExpressionException("Unknown name " + x + " " + globals)
       Global(r, x)
     case Var(x) =>
       val r = locals(x)
@@ -87,8 +91,8 @@ object Expression {
                locals: Index[String],
                globals: Index[String]):ValExpression = fexp match {
     case FApplication(name, args) =>
-      val fn = refFunctions(name)
-      if (fn < 0) throw new ExpressionException("Unknown function " + fn)
+      val fn = valFunctions(name)
+      if (fn < 0) throw new ExpressionException("Unknown function " + name)
       Resource(fn, args.map(CellExpression.fromRefExp(_, refFunctions, locals, globals)))
     case BinaryExp(op, lhs, rhs) =>
       Binary(op, fromValExp(lhs, refFunctions, valFunctions, locals, globals), fromValExp(rhs, refFunctions, valFunctions, locals, globals))
@@ -114,11 +118,11 @@ object Expression {
   }
 
   case class Number(x: Double) extends ValExpression {
-    def resource(context: EvalContext): Double = x
+    def valueWith(context: EvalContext): Double = x
   }
 
   case class Resource(fn: Int, args: IndexedSeq[CellExpression]) extends ValExpression {
-    def resource(context: EvalContext) = context.resource(fn, args.map(a => a.cell(context)))
+    def valueWith(context: EvalContext) = context.resource(fn, args.map(a => a.cell(context)))
     def update(context: EvalContext, v: Double) = context.updateResource(fn, args.map(a => a.cell(context)), v)
   }
 
@@ -136,16 +140,16 @@ object Expression {
   }
 
   case class Binary(op: BinaryOp, lhs: ValExpression, rhs: ValExpression) extends ValExpression {
-    def resource(context: EvalContext): Double = op(lhs.resource(context),rhs.resource(context))
+    def valueWith(context: EvalContext): Double = op(lhs.valueWith(context),rhs.valueWith(context))
   }
 
   case class Multi(op: MultiOp, args: IndexedSeq[ValExpression]) extends ValExpression {
 
-    def resource(context: EvalContext) = op(args.map(a => a.resource(context)))
+    def valueWith(context: EvalContext) = op(args.map(a => a.valueWith(context)))
   }
 
   case class Negation(arg: ValExpression) extends ValExpression {
-    def resource(context: EvalContext) = -arg.resource(context)
+    def valueWith(context: EvalContext) = -arg.valueWith(context)
   }
 
   case class ExpressionException(msg: String) extends Exception(msg)

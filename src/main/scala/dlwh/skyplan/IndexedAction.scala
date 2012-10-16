@@ -13,7 +13,7 @@ case class IndexedAction(name: String,
 
   def ground(state: State,
              args: IndexedSeq[Int]) = {
-    GroundedAction(this, args, state.time + duration.map(_.resource(state.makeContext(args))).getOrElse(0.0))
+    GroundedAction(this, args, state.time + duration.map(_.valueWith(state.makeContext(args))).getOrElse(0.0))
   }
 
   def allPossibleGrounded(state: State) = {
@@ -28,11 +28,8 @@ case class IndexedAction(name: String,
 
 
     for(list <- argLists) {
-      val context = state.makeContext(0 +: list)
-      val holds = precondition.forall { p =>
-        p.holds(state, context)
-
-      }
+      val ga = ground(state, list)
+      val holds = ga.canExecute(state)
       if(holds) {
         grounded += ground(state, list)
       }
@@ -52,7 +49,7 @@ object IndexedAction {
                  props: Grounding,
                  resources: Grounding,
                  vars: Grounding) = {
-    val locals = Index(Iterator("duration") ++ a.args.map(_.name))
+    val locals = Index(a.args.map(_.name))
     val prec = a.precondition.map(IndexedCondition.fromCondition(_, props, vars.index, resources.index, locals, objs.index))
     val duration = a.duration.map {
       case PDDL.StandardDuration(comp, value) => Expression.fromValExp(value, vars.index, resources.index, locals, objs.index)

@@ -4,6 +4,8 @@ import org.scalatest._
 import org.scalatest.junit._
 import org.junit.runner.RunWith
 import io.Source
+import dlwh.search.Domain
+import com.sun.net.httpserver.Authenticator.Success
 
 /**
  *
@@ -129,6 +131,34 @@ class PDDLTest extends FunSuite {
   test("Read in time rover problem") {
     val input = slurpResource("examples/rover/time/problem.pddl")
     PDDL.parseProblem(input)
+  }
+
+  test("Types") {
+    PDDL.DomainReader.parse(PDDL.DomainReader.types,
+      """ (:types place vehicle - store
+        | resource)
+        | """.stripMargin).get
+  }
+
+
+  test("Read in settlers ") {
+    val input = slurpResource("examples/pddl/settlers/domain.pddl")
+    PDDL.parseDomain(
+      """
+        |(define (domain civ)
+        |  (:requirements :fluents :typing :conditional-effects)
+        |  (:types place vehicle - store
+        |	  resource)
+
+        |
+        |   )
+      """.stripMargin)
+    PDDL.parseDomain(input)
+
+    for (i <- 1 until 20) {
+      val input = slurpResource("examples/pddl/settlers/pfile"+i)
+      PDDL.parseProblem(input)
+    }
   }
 
 }
