@@ -30,6 +30,7 @@ class AStarPlannerTest  extends FunSuite {
   }
   */
 
+  /*
   test("Settlers 1") {
     val input = slurpResource("examples/pddl/settlers/domain.pddl")
     val input2 = slurpResource("examples/pddl/settlers/pfile1")
@@ -49,4 +50,5 @@ class AStarPlannerTest  extends FunSuite {
       throw e
     }
   }
+  */
 }

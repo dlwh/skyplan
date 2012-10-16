@@ -97,10 +97,10 @@ case object CrazyAxiom extends AxiomOrdering {
 case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffects: Boolean = true) {
   val (resourceOrders, axiomOrders) = inferOrderings
   for (i <- 0 until problem.valFuns.size) {
-    println(problem.valFuns.groundedByName.get(i) + ": " + resourceOrders(i))
+    println(problem.valFuns.groundedIndex.get(i) + ": " + resourceOrders(i))
   }
   for (i <- 0 until problem.predicates.size) {
-    println(problem.predicates.groundedByName.get(i) + ": " + axiomOrders(i))
+    println(problem.predicates.groundedIndex.get(i) + ": " + axiomOrders(i))
   }
 
   def baseConditions(condition: IndexedCondition, flip: Boolean): Seq[(IndexedCondition, Boolean)] = {

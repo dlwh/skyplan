@@ -69,6 +69,8 @@ object PDDL {
   case class Pred(predicate: String, args: IndexedSeq[RefExp]) extends Condition
   case class TimedCondition(time: TimeSpecifier, cond: Condition) extends Condition
   case class ContinuousCondition(cond: Condition) extends Condition
+  case class Not(predicate: String, args: IndexedSeq[RefExp]) extends Condition
+  case class Or(predicate: String, args: IndexedSeq[RefExp]) extends Condition
 
   sealed trait ValExp
   sealed trait RefExp
@@ -197,6 +199,7 @@ object PDDL {
         | "increase" ^^ { _ => Increase}
         | "decrease" ^^ { _ => Decrease}
       )
+
 
     lazy val pre_gd:Parser[Condition] = (
       surround("and" ~> rep(pre_gd)) ^^ {res => AndCondition(res.toIndexedSeq)}
