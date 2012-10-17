@@ -48,6 +48,18 @@ case class AndCondition(conjuncts: IndexedSeq[IndexedCondition]) extends Indexed
   }
 }
 
+case class OrCondition(disjuncts: IndexedSeq[IndexedCondition]) extends IndexedCondition {
+  def holds(s: State, context: EvalContext):Boolean = {
+    disjuncts.exists(_.holds(s,context))
+  }
+}
+
+case class NotCondition(base: IndexedCondition) extends IndexedCondition {
+  def holds(s: State, context: EvalContext):Boolean = {
+    !base.holds(s, context)
+  }
+}
+
 case class BinaryCompCondition(op: BinaryComp, lhs: ValExpression, rhs: ValExpression) extends IndexedCondition {
   def holds(s: State, context: EvalContext): Boolean = {
     op(lhs.valueWith(context), rhs.valueWith(context))

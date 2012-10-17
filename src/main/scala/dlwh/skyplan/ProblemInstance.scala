@@ -131,8 +131,8 @@ case class ProblemInstance(objects: GroundedObjects,
   }
 
   def allArgumentLists(action: IndexedAction):IndexedSeq[IndexedSeq[Int]] = {
-    val objects = action.signature map objects.instancesByType
-    val argLists = objects.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
+    val objectSets = action.signature map objects.instancesByType
+    val argLists = objectSets.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
       for(a <- acc; i <- objs) yield {
         a :+ i
       }
