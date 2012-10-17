@@ -52,6 +52,28 @@ trait EvalContext { outer =>
   }
 }
 
+object EvalContext {
+  val emptyContext = new EvalContext {
+    /**
+     * Returns the ground number of the object referenced by the
+     * i'th local varioable. Maintained as a stack, basically.
+     * @param i
+     * @return
+     */
+    def local(i: Int) = -1
+
+    def resource(fn: Int, args: IndexedSeq[Int]) = 0.0
+
+    def cell(fn: Int, args: IndexedSeq[Int]) = -1
+
+    def numLocals = 0
+
+    def updateResource(fn: Int, args: IndexedSeq[Int], v: Double) {}
+
+    def updateCell(fn: Int, args: IndexedSeq[Int], v: Int) {}
+  }
+}
+
 sealed trait CellExpression {
   def cell(context: EvalContext):Int
 }

@@ -1,8 +1,11 @@
 package dlwh.skyplan
 
-import dlwh.skyplan.Expression.{Resource, Negation, Binary, Multi}
+import dlwh.skyplan.Expression._
 import collection.mutable
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
+import dlwh.skyplan.Expression.Negation
+import dlwh.skyplan.Expression.Binary
+import dlwh.skyplan.Expression.Resource
+import dlwh.skyplan.Expression.Multi
 
 /**
  * Created with IntelliJ IDEA.
@@ -111,6 +114,8 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
     expression match {
       case Multi(op, args) => args.map(allVars(_, flip, c)).foldLeft(IndexedSeq.empty[(Int, Boolean)])(_ ++ _)
       case Binary(Plus, lhs, rhs) => allVars(lhs, flip, c) ++ allVars(rhs, flip, c)
+      case Binary(Times, Number(0), rhs) => mutable.IndexedSeq.empty[(Int, Boolean)]
+      case Binary(Times, lhs, Number(0)) => mutable.IndexedSeq.empty[(Int, Boolean)]
       case Binary(Times, lhs, rhs) => allVars(lhs, flip, c) ++ allVars(rhs, flip, c)
       case Binary(Minus, lhs, rhs) => allVars(lhs, flip, c) ++ allVars(rhs, !flip, c)
       case Binary(Div, lhs, rhs) => allVars(lhs, flip, c) ++ allVars(rhs, !flip, c)
@@ -130,6 +135,7 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
   def inferOrderings : (Array[ResourceOrdering], Array[AxiomOrdering]) = {
     val ro = new Array[ResourceOrdering](problem.valFuns.size)
     val ao = new Array[AxiomOrdering](problem.predicates.size)
+    applyToAll(ro, LessIsBetter, allVars(problem.metricExp, false, EvalContext.emptyContext))
     for ((action, actionArgs) <- problem.allGroundedActions) {
       for (pc <- action.precondition) {
         val context = new EvalContext {
