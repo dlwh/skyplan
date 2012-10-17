@@ -11,55 +11,61 @@ import dlwh.skyplan.PDDL.Domain
 import dlwh.skyplan.PDDL.Action
 import dlwh.skyplan.PDDL.Predicate
 import dlwh.skyplan.Expression.Resource
+import breeze.linalg.Axis._0
 
 case class State(problem: ProblemInstance,
                  var time: Double,
-                 var planLength: Int,
                  /** resources are grounded fluents with number domains */
                  resources: HashVector[Double],
                  /** axioms are grounded predicates */
                  var axioms: mutable.BitSet,
                  /** bindings are for object-valued fluents and constants */
                  bindings: OpenAddressHashArray[Int],
-                 pendingActions: mutable.PriorityQueue[GroundedAction] = mutable.PriorityQueue.empty[GroundedAction]) {
+                 pendingActions: ActionQueue) {
 
-  override val hashCode = {
+  override def hashCode = {
     (time,axioms).hashCode
   }
 
-  lazy val possibleActions = {
-    problem.actions.flatMap(_.allPossibleGrounded(this))
+  def allPossibleGrounded(action: IndexedAction):IndexedSeq[IndexedSeq[Int]] = {
+    val idx = problem.actions.index(action)
+    val objects = action.signature map problem.objects.instancesByType
+    val argLists = objects.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
+      for(a <- acc; i <- objs) yield {
+        a :+ i
+      }
+    }
+
+    argLists.filter(action.canExecute(this, _))
   }
 
-  lazy val endingState = {
-    val clone = copy
-    while(clone.pendingActions.nonEmpty) {
-      clone.elapseTime()
+  def possibleActions = {
+    (for( a <- problem.actions.index; argList <- allPossibleGrounded(a)) yield a -> argList).toIndexedSeq
+  }
+
+  def applyAction(groundedIndex: Int, duration: Double) {
+    problem.actions.unground(groundedIndex).effect.updateState(this, PDDL.Start, this.makeContext())
+    if(duration > 0) {
+      pendingActions.enqueue(groundedIndex, time+duration)
     }
   }
 
-  def applyAction(a: GroundedAction) {
-    require(a.completionTime >= time)
-    a.applyStart(this)
-    if(a.completionTime > time) {
-      pendingActions.enqueue(a)
-    }
+  def hasAction() = {
+    pendingActions.nextTime != Double.PositiveInfinity
   }
 
   def elapseTime(delta: Double = -1) {
-    val newTime = if(delta > 0) time + delta else (pendingActions.head.completionTime)
-
-    while(pendingActions.head.completionTime < newTime) {
-      pendingActions.dequeue().applyEnd(this)
+    val newTime = if(delta > 0) time + delta else (pendingActions.nextTime)
+    for ((a, t) <- pendingActions.dequeue()) {
+      // TODO: add duration field to context, use t - time as duration.
+      problem.actions.unground(a).effect.updateState(this, PDDL.End, this.makeContext())
     }
-
-
-
+    time = newTime
   }
 
 
   def copy: State = {
-    State(problem, time, planLength, resources.copy, axioms.clone(), bindings.copy, pendingActions.clone())
+    State(problem, time, resources.copy, axioms.clone(), bindings.copy, pendingActions.clone())
   }
 
 
@@ -113,10 +119,10 @@ case class State(problem: ProblemInstance,
  * @author dlwh
  */
 case class ProblemInstance(objects: GroundedObjects,
-                           predicates: Grounding,
-                           actions: IndexedSeq[IndexedAction],
-                           refFuns: Grounding,
-                           valFuns: Grounding,
+                           predicates: Grounding[String],
+                           actions: Grounding[IndexedAction],
+                           refFuns: Grounding[String],
+                           valFuns: Grounding[String],
                            metricExp: ValExpression,
                            goal: IndexedCondition,
                            initEffect: IndexedEffect) {
@@ -126,13 +132,14 @@ case class ProblemInstance(objects: GroundedObjects,
   }
 
   def initialState: State = {
-    val s = State(this, 0, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](refFuns.size max 1, -1))
+    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](refFuns.size max 1, -1), new ActionQueue(actions))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }
 
+  // DEBUG METHOD
   def groundedAction(state: State, name: String, args: String*) = {
-    actions.find(_.name== name).get.ground(state, args.map(objects.index).toIndexedSeq)
+    actions.ground(actions.index(actions.index.find(_.name== name).get), args.map(objects.index).toIndexedSeq)
   }
 
 
@@ -149,7 +156,8 @@ case class GroundedObjects(types: Index[String], index: Index[String], instances
   }
 }
 
-case class Grounding(index: Index[String],
+case class Grounding[T](index: Index[T],
+                     ungrounded: Array[Int],
                      groundedByName: Index[String],
                      // propIndex -> args.foldLeft(0)(_ * objectIndex.size + _) -> groundedIndex
                      groundings: Array[Array[Int]],
@@ -157,18 +165,26 @@ case class Grounding(index: Index[String],
 
   def size = groundedByName.size
 
-  def ground(predicate: Int, args: IndexedSeq[Int]) = {
+  def ground(predicate: Int, args: IndexedSeq[Int]):Int = {
     if(isAtomic(predicate)) {
       groundings(predicate)(0)
     } else {
       groundings(predicate)(args.foldLeft(0)(_ * objects.size + _))
     }
   }
+
+  def ground(predicate: T, args: IndexedSeq[Int]):Int = {
+    ground(index(predicate), args)
+  }
+
+  def unground(groundedIndex: Int): T = {
+    index.get(ungrounded(groundedIndex))
+  }
+
   def isAtomic(functionOrPredicate: Int) = groundings(functionOrPredicate).length == 1
 
 
 }
-
 
 
 object ProblemInstance {
@@ -202,10 +218,42 @@ object ProblemInstance {
 
   }
 
-  def indexActions(map: Map[String, Action], objs: GroundedObjects, props: Grounding, resources: Grounding, vars: Grounding) = {
-    for( (name, a) <- map.toIndexedSeq) yield {
+  def indexActions(map: Map[String, Action], objs: GroundedObjects, props: Grounding[String], resources: Grounding[String], vars: Grounding[String]) = {
+    import objs._
+    val indexed = for( (name, a) <- map.toIndexedSeq) yield {
       IndexedAction.fromAction(a, Index[String](), objs, props, resources, vars)
     }
+
+
+    val predicateIndex = Index[IndexedAction](indexed)
+    val groundedByName = Index[String]()
+    val inverse = ArrayBuffer[Int]()
+
+    val groundings = new Array[Array[Int]](predicateIndex.size)
+    for( (a, i) <- predicateIndex.pairs) {
+      if(a.signature.nonEmpty) {
+        val intArgs = a.signature.foldLeft(IndexedSeq(IndexedSeq.empty[Int])) { (acc, nextArg) =>
+          for( soFar <- acc; a <- instancesByType(nextArg)) yield soFar :+ a
+        }
+        groundings(i) = Array.fill[Int](math.pow(index.size, a.signature.length).toInt max 1)(-1)
+
+        for(instance <- intArgs) {
+          val key = instance.foldLeft(0)(_ * index.size + _)
+          assert(key >= 0, "Too many objects.... gonna have to rethink your indexing...")
+          val groundedName = instance.map(index.get(_)).mkString("(" + a.name + " " , " ", ")")
+          val ind = groundedByName.index(groundedName)
+
+          groundings(i)(key) = ind
+          inverse += i
+        }
+      } else {
+        val ind = groundedByName.index(a.name)
+        groundings(i) = Array(ind)
+      }
+    }
+
+    new Grounding(predicateIndex, inverse.toArray, groundedByName, groundings, index)
+
   }
 
 
@@ -214,6 +262,7 @@ object ProblemInstance {
     import groundedObjects._
     val predicateIndex = Index[String](predicate.keys)
     val groundedByName = Index[String]()
+    val inverse = ArrayBuffer[Int]()
 
     val groundings = new Array[Array[Int]](predicateIndex.size)
     for( (pn, i) <- predicateIndex.pairs; p =  predicate(pn)) {
@@ -230,6 +279,7 @@ object ProblemInstance {
           val ind = groundedByName.index(groundedName)
 
           groundings(i)(key) = ind
+          inverse += i
         }
       } else {
         val ind = groundedByName.index(p.name)
@@ -237,7 +287,7 @@ object ProblemInstance {
       }
     }
 
-    new Grounding(predicateIndex, groundedByName, groundings, index)
+    new Grounding(predicateIndex, inverse.toArray, groundedByName, groundings, index)
   }
 
 
@@ -248,22 +298,25 @@ object ProblemInstance {
     val grndVarByName = Index[String]()
     val groundingsN = new ArrayBuffer[Array[Int]]()
     val groundingsV = new ArrayBuffer[Array[Int]]()
+    val inverseN = ArrayBuffer[Int]()
+    val inverseV = ArrayBuffer[Int]()
 
     for( (name, f) <- functions) {
       f.resultType match {
         case "number" =>
           val fi = numericIndex.index(name)
           groundingsN += groundFluent(objs, f, grndNumByName)
+          inverseN ++= Array.fill(groundingsN.last.length)(groundingsN.length - 1)
         case _ =>
           val fi = variableIndex.index(name)
           groundingsV += groundFluent(objs, f, grndVarByName)
-
-      }
+          inverseV ++= Array.fill(groundingsV.last.length)(groundingsV.length - 1)
+     }
 
     }
 
-    val nums = Grounding(numericIndex, grndNumByName, groundingsN.toArray, objs.index)
-    val vars = Grounding(variableIndex, grndVarByName, groundingsV.toArray, objs.index)
+    val nums = Grounding(numericIndex, inverseN.toArray, grndNumByName, groundingsN.toArray, objs.index)
+    val vars = Grounding(variableIndex, inverseV.toArray, grndVarByName, groundingsV.toArray, objs.index)
 
     (nums, vars)
   }

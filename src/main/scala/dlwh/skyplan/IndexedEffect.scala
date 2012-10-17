@@ -19,9 +19,9 @@ object IndexedEffect {
   def fromEffect(effect: Effect,
                  locals: Index[String],
                  objs: GroundedObjects,
-                 refFunctions: Grounding,
-                 valFunctions: Grounding,
-                 preds: Grounding):IndexedEffect = {
+                 refFunctions: Grounding[String],
+                 valFunctions: Grounding[String],
+                 preds: Grounding[String]):IndexedEffect = {
     def rec(eff: Effect, varBindings: Index[String]):IndexedEffect = eff match {
       case PDDL.AndEffect(xs) =>
         val recs = xs.map(rec(_,varBindings))

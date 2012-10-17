@@ -22,11 +22,12 @@ object AStarPlanner {
     }
 
     def succ(s: State, cost: Double) = {
-      s.possibleActions.map { a =>
+      s.possibleActions.map { case (a, list) =>
         val c = s.copy
-        c.applyAction(a)
+        val grounded = s.problem.actions.ground(a, list)
+        c.applyAction(grounded, a.durationOf(s, list))
 
-        (c, a, 0.0)
+        (c, (a, list), 0.0)
       }
     }
     AStarSearch.search(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, h = h _)

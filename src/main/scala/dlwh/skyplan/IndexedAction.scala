@@ -11,33 +11,13 @@ case class IndexedAction(name: String,
                          effect: IndexedEffect,
                          duration: Option[ValExpression]) {
 
-  def ground(state: State,
-             args: IndexedSeq[Int]) = {
-    GroundedAction(this, args, state.time + duration.map(_.valueWith(state.makeContext(args))).getOrElse(0.0))
+  def canExecute(state: State, args: IndexedSeq[Int]) = {
+    precondition.forall(_.holds(state, state.makeContext(args)))
   }
 
-  def allPossibleGrounded(state: State) = {
-    val objects = signature map state.problem.objects.instancesByType
-    val argLists = objects.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
-      for(a <- acc; i <- objs) yield {
-        a :+ i
-      }
-    }
-
-    val grounded = ArrayBuffer[GroundedAction]()
-
-
-    for(list <- argLists) {
-      val ga = ground(state, list)
-      val holds = ga.canExecute(state)
-      if(holds) {
-        grounded += ground(state, list)
-      }
-    }
-
-    grounded.toIndexedSeq
+  def durationOf(state: State, args: IndexedSeq[Int]) = {
+    duration.map(_.valueWith(state.makeContext(args))).getOrElse(0.0)
   }
-
 
 }
 
@@ -46,9 +26,9 @@ object IndexedAction {
   def fromAction(a: PDDL.Action,
                  standardLocals: Index[String],
                  objs: GroundedObjects,
-                 props: Grounding,
-                 resources: Grounding,
-                 vars: Grounding) = {
+                 props: Grounding[String],
+                 resources: Grounding[String],
+                 vars: Grounding[String]) = {
     val locals = Index(a.args.map(_.name))
     val prec = a.precondition.map(IndexedCondition.fromCondition(_, props, vars.index, resources.index, locals, objs.index))
     val duration = a.duration.map {

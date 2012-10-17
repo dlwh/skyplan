@@ -9,7 +9,7 @@ sealed trait IndexedCondition {
 
 object IndexedCondition {
   def fromCondition(cond: PDDL.Condition,
-                    preds: Grounding,
+                    preds: Grounding[String],
                     refFunctions: Index[String],
                  valFunctions: Index[String],
                  locals: Index[String],

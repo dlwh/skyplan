@@ -70,8 +70,28 @@ case object CrazyAxiom extends AxiomOrdering {
 }
 
 case class DominanceChecker(problem: ProblemInstance) {
+  val (resourceOrders, axiomOrders) = inferOrderings
+
+  def inferOrderings : (Array[ResourceOrdering], Array[AxiomOrdering]) = {
+    val ro = new Array[ResourceOrdering](problem.valFuns.size)
+    val ao = new Array[AxiomOrdering](problem.predicates.size)
+
+    (ro, ao)
+  }
+
+
   def compareStates(first: State, second: State) : PartialOrder = {
-    var cmp = Equals
+    var cmp : PartialOrder = LessIsBetter.orderResourceQuantities(first.time, second.time)
+    for (r : Int <- first.resources.keySet union second.resources.keySet) {
+      val o = resourceOrders(r)
+      cmp = cmp combine o.orderResourceQuantities(first.resources(r), second.resources(r))
+      if (cmp == NonComparable) return cmp
+    }
+    for (a : Int <- first.axioms | second.axioms) {
+      val o = axiomOrders(a)
+      cmp = cmp combine o.orderAxiomTruth(first.axioms.contains(a), second.axioms.contains(a))
+      if (cmp == NonComparable) return cmp
+    }
 
     cmp
   }
