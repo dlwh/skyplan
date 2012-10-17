@@ -28,14 +28,7 @@ case class State(problem: ProblemInstance,
   }
 
   def allPossibleGrounded(action: IndexedAction):IndexedSeq[IndexedSeq[Int]] = {
-    val idx = problem.actions.index(action)
-    val objects = action.signature map problem.objects.instancesByType
-    val argLists = objects.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
-      for(a <- acc; i <- objs) yield {
-        a :+ i
-      }
-    }
-
+    val argLists = problem.allArgumentLists(action)
     argLists.filter(action.canExecute(this, _))
   }
 
@@ -135,6 +128,21 @@ case class ProblemInstance(objects: GroundedObjects,
     val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](refFuns.size max 1, -1), new ActionQueue(actions))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
+  }
+
+  def allArgumentLists(action: IndexedAction):IndexedSeq[IndexedSeq[Int]] = {
+    val objects = action.signature map objects.instancesByType
+    val argLists = objects.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
+      for(a <- acc; i <- objs) yield {
+        a :+ i
+      }
+    }
+
+    argLists
+  }
+
+  def allGroundedActions = {
+    (for( a <- actions.index; argList <- allArgumentLists(a)) yield a -> argList).toIndexedSeq
   }
 
   // DEBUG METHOD
