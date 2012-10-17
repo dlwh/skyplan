@@ -9,7 +9,8 @@ organization := "dlwh"
 scalaVersion := "2.9.2"
 
 resolvers ++= Seq(
-  "Scala Tools Snapshots" at "http://scala-tools.org/repo-snapshots/"
+  "Scala Tools Snapshots" at "http://scala-tools.org/repo-snapshots/",
+"Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 )
 
 libraryDependencies ++= Seq(
