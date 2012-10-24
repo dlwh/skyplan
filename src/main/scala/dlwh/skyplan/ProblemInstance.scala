@@ -19,8 +19,6 @@ case class State(problem: ProblemInstance,
                  resources: HashVector[Double],
                  /** axioms are grounded predicates */
                  var axioms: mutable.BitSet,
-                 /** bindings are for object-valued fluents and constants */
-                 bindings: OpenAddressHashArray[Int],
                  pendingActions: ActionQueue) {
 
   override def hashCode = {
@@ -58,7 +56,7 @@ case class State(problem: ProblemInstance,
 
 
   def copy: State = {
-    State(problem, time, resources.copy, axioms.clone(), bindings.copy, pendingActions.clone())
+    State(problem, time, resources.copy, axioms.clone(), pendingActions.clone())
   }
 
 
@@ -79,16 +77,8 @@ case class State(problem: ProblemInstance,
       }
     }
 
-    def cell(fn: Int, args: IndexedSeq[Int]): Int = {
-      bindings(problem.refFuns.ground(fn, args))
-    }
-
     def updateResource(fn: Int, args: IndexedSeq[Int], v: Double) {
       resources(problem.valFuns.ground(fn, args)) = v
-    }
-
-    def updateCell(fn: Int, args: IndexedSeq[Int], v: Int) {
-      bindings(problem.refFuns.ground(fn, args)) = v
     }
   }
 
@@ -98,7 +88,7 @@ case class State(problem: ProblemInstance,
     val sb = new mutable.StringBuilder()
     sb ++= "State("
     sb ++= "time=" + time + ", "
-    sb ++= "resources=" + Encoder.fromIndex(problem.refFuns.groundedByName).decode(resources).toString +",\n "
+    sb ++= "resources=" + Encoder.fromIndex(problem.valFuns.groundedByName).decode(resources).toString +",\n "
     sb ++= "axioms=" + axioms.map(problem.predicates.groundedByName.get _).toString +",\n"
     sb ++= "pending=" + pendingActions+"\n"
     sb ++= ")"
@@ -114,7 +104,6 @@ case class State(problem: ProblemInstance,
 case class ProblemInstance(objects: GroundedObjects,
                            predicates: Grounding[String],
                            actions: Grounding[IndexedAction],
-                           refFuns: Grounding[String],
                            valFuns: Grounding[String],
                            metricExp: ValExpression,
                            goal: IndexedCondition,
@@ -125,7 +114,7 @@ case class ProblemInstance(objects: GroundedObjects,
   }
 
   def initialState: State = {
-    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new OpenAddressHashArray[Int](refFuns.size max 1, -1), new ActionQueue(actions))
+    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new ActionQueue(actions))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }
@@ -208,28 +197,28 @@ object ProblemInstance {
     val objs = GroundedObjects(types, objects, instancesByType)
 
     val propositions = groundPropositions(domain.predicates, objs)
-    val (resources, vars) = groundFluents(domain.functions, objs)
-    val actions = indexActions(domain.actions, objs, propositions, resources, vars)
+    val resources = groundFluents(domain.functions, objs)
+    val actions = indexActions(domain.actions, objs, propositions, resources)
 
     val metric = problem.metric.map{ case PDDL.MetricSpec(dir, exp) =>
-      val base = Expression.fromValExp(exp, vars.index, resources.index, Index[String](), objs.index)
+      val base = Expression.fromValExp(exp, resources.index, Index[String](), objs.index)
       if(dir == PDDL.Maximize)
         Expression.Negation(base)
       else
         base
     }.getOrElse(Expression.Number(0))
 
-    val init = IndexedEffect.fromEffect(problem.initialState, Index[String](), objs, vars, resources, propositions)
-    val goal = IndexedCondition.fromCondition(problem.goal, propositions, vars.index, resources.index, Index[String](), objs.index)
+    val init = IndexedEffect.fromEffect(problem.initialState, Index[String](), objs,  resources, propositions)
+    val goal = IndexedCondition.fromCondition(problem.goal, propositions, resources.index, Index[String](), objs.index)
 
-    new ProblemInstance(objs, propositions, actions, vars, resources, metric, goal, init)
+    new ProblemInstance(objs, propositions, actions, resources, metric, goal, init)
 
   }
 
-  def indexActions(map: Map[String, Action], objs: GroundedObjects, props: Grounding[String], resources: Grounding[String], vars: Grounding[String]) = {
+  def indexActions(map: Map[String, Action], objs: GroundedObjects, props: Grounding[String], resources: Grounding[String]) = {
     import objs._
     val indexed = for( (name, a) <- map.toIndexedSeq) yield {
-      IndexedAction.fromAction(a, Index[String](), objs, props, resources, vars)
+      IndexedAction.fromAction(a, Index[String](), objs, props, resources)
     }
 
 
@@ -301,13 +290,9 @@ object ProblemInstance {
 
   def groundFluents(functions: Map[String, PDDL.Function], objs: GroundedObjects) = {
     val numericIndex = Index[String]()
-    val variableIndex = Index[String]()
     val grndNumByName = Index[String]()
-    val grndVarByName = Index[String]()
     val groundingsN = new ArrayBuffer[Array[Int]]()
-    val groundingsV = new ArrayBuffer[Array[Int]]()
     val inverseN = ArrayBuffer[Int]()
-    val inverseV = ArrayBuffer[Int]()
 
     for( (name, f) <- functions) {
       f.resultType match {
@@ -316,17 +301,13 @@ object ProblemInstance {
           groundingsN += groundFluent(objs, f, grndNumByName)
           inverseN ++= Array.fill(groundingsN.last.length)(groundingsN.length - 1)
         case _ =>
-          val fi = variableIndex.index(name)
-          groundingsV += groundFluent(objs, f, grndVarByName)
-          inverseV ++= Array.fill(groundingsV.last.length)(groundingsV.length - 1)
      }
 
     }
 
     val nums = Grounding(numericIndex, inverseN.toArray, grndNumByName, groundingsN.toArray, objs.index)
-    val vars = Grounding(variableIndex, inverseV.toArray, grndVarByName, groundingsV.toArray, objs.index)
 
-    (nums, vars)
+    nums
   }
 
 

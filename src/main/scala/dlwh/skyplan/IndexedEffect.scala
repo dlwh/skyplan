@@ -2,7 +2,7 @@ package dlwh.skyplan
 
 import collection.immutable.BitSet
 import dlwh.skyplan.Expression.Resource
-import dlwh.skyplan.PDDL.{AssignEffect, RefAssignEffect, Effect}
+import dlwh.skyplan.PDDL.{AssignEffect, Effect}
 import breeze.util.Index
 
 
@@ -19,7 +19,6 @@ object IndexedEffect {
   def fromEffect(effect: Effect,
                  locals: Index[String],
                  objs: GroundedObjects,
-                 refFunctions: Grounding[String],
                  valFunctions: Grounding[String],
                  preds: Grounding[String]):IndexedEffect = {
     def rec(eff: Effect, varBindings: Index[String]):IndexedEffect = eff match {
@@ -28,23 +27,14 @@ object IndexedEffect {
         AndEffect(recs)
       case PDDL.DisablePred(pred) =>
         val predIndex = preds.index(pred.predicate)
-        DisableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, refFunctions.index, varBindings, objs.index)))
+        DisableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, varBindings, objs.index)))
       case PDDL.EnablePred(pred) =>
         val predIndex = preds.index(pred.predicate)
-        EnableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, refFunctions.index, varBindings, objs.index)))
-      case RefAssignEffect(lhs, rhs) =>
-        val lcell = CellExpression.fromRefExp(lhs, refFunctions.index, varBindings, objs.index).asInstanceOf[Expression.Cell]
-        val rcell = CellExpression.fromRefExp(rhs, refFunctions.index, varBindings, objs.index)
-        AssignToCell(lcell,  rcell)
+        EnableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, varBindings, objs.index)))
       case ae@AssignEffect(op, lhs, rhs) =>
-        val ri = refFunctions.index(lhs.name)
-        if(ri >= 0) {
-          rec(ae.toRefAssignEffect, varBindings)
-        } else {
-          val lcell = Expression.fromValExp(lhs, refFunctions.index, valFunctions.index, varBindings, objs.index)
-          val rcell = Expression.fromValExp(rhs, refFunctions.index, valFunctions.index, varBindings, objs.index)
-          AssignToResource(op, lcell.asInstanceOf[Expression.Resource],  rcell)
-        }
+        val lcell = Expression.fromValExp(lhs, valFunctions.index, varBindings, objs.index)
+        val rcell = Expression.fromValExp(rhs, valFunctions.index, varBindings, objs.index)
+        AssignToResource(op, lcell.asInstanceOf[Expression.Resource],  rcell)
       case PDDL.UniversalEffect(args, eff) =>
         val extended = Index(varBindings ++ args.map(_.name))
         UniversalEffect(objs.allGroundingsOfArgumentTypes(args.map(_.tpe)).map(_.toArray), rec(eff, extended))
@@ -52,7 +42,7 @@ object IndexedEffect {
         val a = rec(arg, varBindings)
         new TimedEffect(spec, a)
       case PDDL.CondEffect(guard, arg) =>
-        val ig = IndexedCondition.fromCondition(guard, preds, refFunctions.index, valFunctions.index, varBindings, objs.index)
+        val ig = IndexedCondition.fromCondition(guard, preds, valFunctions.index, varBindings, objs.index)
         val a = rec(arg, varBindings)
         new CondEffect(ig, a)
     }
@@ -106,12 +96,6 @@ case class AssignToResource(op: AssignOp, lhs: Resource, rhs: ValExpression) ext
       case ScaleDown =>
         lhs.update(context, r / exp)
     }
-  }
-}
-
-case class AssignToCell(lhs: Expression.Cell, rhs: CellExpression) extends IndexedEffect {
-  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
-    lhs.update(context, rhs.cell(context))
   }
 }
 

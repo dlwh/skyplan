@@ -112,17 +112,7 @@ object PDDL {
   sealed trait PrimEffect extends Effect
   case class DisablePred(pred: Pred) extends PrimEffect
   case class EnablePred(pred: Pred) extends PrimEffect
-  case class RefAssignEffect(lhs: RApplication, rhs: RefExp) extends PrimEffect
-  case class AssignEffect(op: AssignOp, lhs: FApplication, rhs: ValExp) extends PrimEffect {
-    def toRefAssignEffect = {
-      require(op == Assign, "Can't " + op + " references!" + " while converting " + this)
-      val rexp = rhs match {
-        case FApplication(name, args) => RApplication(name, args)
-        case _ => throw new RuntimeException("Type Error: Can't assign to a reference from a " + rhs)
-      }
-      RefAssignEffect(RApplication(lhs.name, lhs.args), rexp)
-    }
-  }
+  case class AssignEffect(op: AssignOp, lhs: FApplication, rhs: ValExp) extends PrimEffect
 
   sealed trait TimeSpecifier
   case object Start extends TimeSpecifier
@@ -185,9 +175,7 @@ object PDDL {
     lazy val precondition: Parser[Option[Condition]]  = sym("precondition") ~> emptyOr(pre_gd)
 
     lazy val effect:Parser[Effect] = (
-       surround( ("=" | "assign") ~ fterm(RApplication(_,_)) ~ term) ^^ { case a ~ b ~ c=> RefAssignEffect(b,c)}
-         // note that this assignment can be
-      | surround(assign_op ~ commit(fterm(FApplication(_,_))) ~ commit(fexp)) ^^ { case a ~ b ~ c=> AssignEffect(a,b,c)}
+        surround(assign_op ~ commit(fterm(FApplication(_,_))) ~ commit(fexp)) ^^ { case a ~ b ~ c=> AssignEffect(a,b,c)}
       | fn("and")(rep(effect)) ^^ {list => AndEffect(list.toIndexedSeq)}
       | fn("forall")(commit(surround(varList)) ~ effect) ^^ { case  list~eff => UniversalEffect(list, eff)}
       | fn("when")(gd ~ effect) ^^ { case  gd~eff => CondEffect(gd, eff)}

@@ -10,7 +10,6 @@ sealed trait IndexedCondition {
 object IndexedCondition {
   def fromCondition(cond: PDDL.Condition,
                     preds: Grounding[String],
-                    refFunctions: Index[String],
                  valFunctions: Index[String],
                  locals: Index[String],
                  globals: Index[String]):IndexedCondition = {
@@ -21,15 +20,15 @@ object IndexedCondition {
             AndCondition(conjuncts.map(rec(_, varBindings)))
           case PDDL.FComp(comp, arg1, arg2) =>
             BinaryCompCondition(comp,
-              Expression.fromValExp(arg1, refFunctions, valFunctions, varBindings, globals),
-              Expression.fromValExp(arg2, refFunctions, valFunctions, varBindings, globals))
+              Expression.fromValExp(arg1, valFunctions, varBindings, globals),
+              Expression.fromValExp(arg2, valFunctions, varBindings, globals))
           case PDDL.RComp(arg1, arg2) =>
             CellEqualCondition(
-              CellExpression.fromRefExp(arg1, refFunctions, varBindings, globals),
-              CellExpression.fromRefExp(arg2, refFunctions, varBindings, globals))
+              CellExpression.fromRefExp(arg1, varBindings, globals),
+              CellExpression.fromRefExp(arg2, varBindings, globals))
           case PDDL.Pred(name, args) =>
             val predIndex = preds.index(name)
-            PredicateCondition(predIndex, args.map(CellExpression.fromRefExp(_, refFunctions, varBindings, globals)))
+            PredicateCondition(predIndex, args.map(CellExpression.fromRefExp(_, varBindings, globals)))
 
         }
       } catch {
