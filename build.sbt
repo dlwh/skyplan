@@ -33,7 +33,7 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 javacOptions ++= Seq("-source", "1.5", "-target", "1.5")
 
-scalacOptions ++= Seq("-deprecation","-target:jvm-1.5")
+scalacOptions ++= Seq("-deprecation")
 
 javaOptions += "-Xmx2g"
 
