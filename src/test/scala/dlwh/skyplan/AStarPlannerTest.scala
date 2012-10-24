@@ -30,10 +30,9 @@ class AStarPlannerTest  extends FunSuite {
   }
   */
 
-  /*
-  test("Settlers 1") {
+  test("Settlers 0") {
     val input = slurpResource("examples/pddl/settlers/domain.pddl")
-    val input2 = slurpResource("examples/pddl/settlers/pfile1")
+    val input2 = slurpResource("examples/pddl/settlers/pfile0")
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
 
@@ -50,5 +49,4 @@ class AStarPlannerTest  extends FunSuite {
       throw e
     }
   }
-  */
 }

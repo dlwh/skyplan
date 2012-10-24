@@ -46,6 +46,7 @@ case class State(problem: ProblemInstance,
 
   def applyAction(groundedIndex: Int, duration: Double) {
     val action = problem.allViableGroundedActions(groundedIndex)
+    assert(action.t.canExecute(this, action.args), action + " " + this)
     action.t.effect.updateState(this, PDDL.Start, this.makeContext(action.args))
     if(duration > 0) {
       pendingActions.enqueue(groundedIndex, time+duration)
@@ -159,7 +160,7 @@ case class ProblemInstance(objects: GroundedObjects,
     Util.allArgumentListsForChoices(objects)
   }
 
-  val techTree = TechTree(this)
+  lazy val techTree = TechTree(this)
 
 }
 

@@ -127,7 +127,7 @@ case class AssignToResource(op: AssignOp, lhs: Resource, rhs: ValExpression) ext
       case Increase =>
         lhs.update(context, exp + r)
       case Decrease =>
-        lhs.update(context, exp - r)
+        lhs.update(context, r - exp)
       case ScaleUp =>
         lhs.update(context, r * exp)
       case ScaleDown =>
