@@ -96,12 +96,12 @@ case object CrazyAxiom extends AxiomOrdering {
 
 case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffects: Boolean = true) {
   val (resourceOrders, axiomOrders) = inferOrderings
-  for (i <- 0 until problem.valFuns.size) {
-    println(problem.valFuns.groundedByName.get(i) + ": " + resourceOrders(i))
-  }
-  for (i <- 0 until problem.predicates.size) {
-    println(problem.predicates.groundedByName.get(i) + ": " + axiomOrders(i))
-  }
+//  for (i <- 0 until problem.valFuns.size) {
+//    println(problem.valFuns.groundedByName.get(i) + "(" + i + "): " + resourceOrders(i))
+//  }
+//  for (i <- 0 until problem.predicates.size) {
+//    println(problem.predicates.groundedByName.get(i) + "(" + i + "): " + axiomOrders(i))
+//  }
 
   def baseConditions(condition: IndexedCondition, flip: Boolean): Seq[(IndexedCondition, Boolean)] = {
     condition match {
@@ -228,8 +228,10 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
 
     for (action : Int <- mutable.BitSet.empty ++ first.pendingActions.data.activeKeysIterator ++
       second.pendingActions.data.activeKeysIterator) {
-      val q1 = first.pendingActions.data(action).clone()
-      val q2 = second.pendingActions.data(action).clone()
+      val q1 = if (first.pendingActions.data.contains(action)) first.pendingActions.data(action).clone()
+               else mutable.Queue.empty[Double]
+      val q2 = if (second.pendingActions.data.contains(action)) second.pendingActions.data(action).clone()
+               else mutable.Queue.empty[Double]
       var actionCmp : PartialOrder = Equals
       var counter = 0
       while (!(q1.isEmpty || q2.isEmpty)) {
