@@ -96,6 +96,12 @@ case object CrazyAxiom extends AxiomOrdering {
 
 case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffects: Boolean = true) {
   val (resourceOrders, axiomOrders) = inferOrderings
+  for (i <- 0 until problem.valFuns.size) {
+    println(problem.valFuns.groundedByName.get(i) + ": " + resourceOrders(i))
+  }
+  for (i <- 0 until problem.predicates.size) {
+    println(problem.predicates.groundedByName.get(i) + ": " + axiomOrders(i))
+  }
 
   def baseConditions(condition: IndexedCondition, flip: Boolean): Seq[(IndexedCondition, Boolean)] = {
     condition match {
@@ -112,7 +118,11 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
 
   def allVars(expression: ValExpression, flip: Boolean, c: EvalContext) : IndexedSeq[(Int, Boolean)] = {
     expression match {
-      case Multi(op, args) => args.map(allVars(_, flip, c)).foldLeft(IndexedSeq.empty[(Int, Boolean)])(_ ++ _)
+      case Multi(Plus, args) => args.map(allVars(_, flip, c)).foldLeft(IndexedSeq.empty[(Int, Boolean)])(_ ++ _)
+      case Multi(Times, args) => {
+        if (args.contains(Number(0))) mutable.IndexedSeq.empty[(Int, Boolean)]
+        else args.map(allVars(_, flip, c)).foldLeft(IndexedSeq.empty[(Int, Boolean)])(_ ++ _)
+      }
       case Binary(Plus, lhs, rhs) => allVars(lhs, flip, c) ++ allVars(rhs, flip, c)
       case Binary(Times, Number(0), rhs) => mutable.IndexedSeq.empty[(Int, Boolean)]
       case Binary(Times, lhs, Number(0)) => mutable.IndexedSeq.empty[(Int, Boolean)]
@@ -135,6 +145,7 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
   def inferOrderings : (Array[ResourceOrdering], Array[AxiomOrdering]) = {
     val ro = new Array[ResourceOrdering](problem.valFuns.size)
     val ao = new Array[AxiomOrdering](problem.predicates.size)
+    applyOrderingsForCondition(problem.goal, EvalContext.emptyContext, ro, ao)
     applyToAll(ro, LessIsBetter, allVars(problem.metricExp, false, EvalContext.emptyContext))
     for ((action, actionArgs) <- problem.allGroundedActions) {
       for (pc <- action.precondition) {
@@ -147,34 +158,51 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
           def cell(fn: Int, args: IndexedSeq[Int]) = -1
           def updateCell(fn: Int, args: IndexedSeq[Int], v: Int) {}
         }
-        for ((baseCondition, flip) <- baseConditions(pc, false)) {
-          baseCondition match {
-            case BinaryCompCondition(op, lhs, rhs) => {
-              val varsOnLHS = allVars(lhs, flip, context)
-              val varsOnRHS = allVars(rhs, flip, context)
-              op match {
-                case PDDL.Equals => applyToAll(ro, NoOrder, varsOnLHS ++ varsOnRHS)
-                case PDDL.> => { applyToAll(ro, MoreIsBetter, varsOnLHS); applyToAll(ro, LessIsBetter, varsOnRHS) }
-                case PDDL.>= => { applyToAll(ro, MoreIsBetter, varsOnLHS); applyToAll(ro, LessIsBetter, varsOnRHS) }
-                case PDDL.< => { applyToAll(ro, MoreIsBetter, varsOnRHS); applyToAll(ro, LessIsBetter, varsOnLHS) }
-                case PDDL.<= => { applyToAll(ro, MoreIsBetter, varsOnRHS); applyToAll(ro, LessIsBetter, varsOnLHS) }
-              }
-            }
-            case PredicateCondition(predicateId, args) => {
-              val axiom = problem.predicates.ground(predicateId, args.map(_.cell(context)))
-              var currentOrder : AxiomOrdering = GoodAxiom
-              if (flip) currentOrder = currentOrder.flip
-              ao(axiom) = currentOrder combine ao(axiom)
-            }
-            case _ => {} // this shouldn't actually happen
-          }
-        }
+        applyOrderingsForCondition(pc, context, ro, ao)
       }
     }
 
     (ro, ao)
   }
 
+
+  def applyOrderingsForCondition(c: IndexedCondition, context: EvalContext,
+                                 ro: Array[ResourceOrdering], ao: Array[AxiomOrdering]) {
+    for ((baseCondition, flip) <- baseConditions(c, false)) {
+      baseCondition match {
+        case BinaryCompCondition(op, lhs, rhs) => {
+          val varsOnLHS = allVars(lhs, flip, context)
+          val varsOnRHS = allVars(rhs, flip, context)
+          op match {
+            case PDDL.Equals => applyToAll(ro, NoOrder, varsOnLHS ++ varsOnRHS)
+            case PDDL.> => {
+              applyToAll(ro, MoreIsBetter, varsOnLHS);
+              applyToAll(ro, LessIsBetter, varsOnRHS)
+            }
+            case PDDL.>= => {
+              applyToAll(ro, MoreIsBetter, varsOnLHS);
+              applyToAll(ro, LessIsBetter, varsOnRHS)
+            }
+            case PDDL.< => {
+              applyToAll(ro, MoreIsBetter, varsOnRHS);
+              applyToAll(ro, LessIsBetter, varsOnLHS)
+            }
+            case PDDL.<= => {
+              applyToAll(ro, MoreIsBetter, varsOnRHS);
+              applyToAll(ro, LessIsBetter, varsOnLHS)
+            }
+          }
+        }
+        case PredicateCondition(predicateId, args) => {
+          val axiom = problem.predicates.ground(predicateId, args.map(_.cell(context)))
+          var currentOrder: AxiomOrdering = GoodAxiom
+          if (flip) currentOrder = currentOrder.flip
+          ao(axiom) = currentOrder combine ao(axiom)
+        }
+        case _ => {} // this shouldn't actually happen
+      }
+    }
+  }
 
   def adjustForActionEffects(action: Int, order: PartialOrder): PartialOrder = {
     if (assumePositiveActionEffects) order

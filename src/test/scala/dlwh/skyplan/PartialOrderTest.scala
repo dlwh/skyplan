@@ -33,7 +33,7 @@ class PartialOrderTest  extends FunSuite {
       val checker = new DominanceChecker(instance)
       val cmp = checker.compareStates(init, compare)
 
-      assert(cmp == Equals)
+      assert(cmp === Equals)
     } catch {
       case e =>
         e.printStackTrace()
@@ -41,3 +41,4 @@ class PartialOrderTest  extends FunSuite {
     }
   }
 }
+
