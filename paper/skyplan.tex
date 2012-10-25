@@ -1,0 +1,118 @@
+%File: formatting-instruction.tex
+\documentclass[letterpaper]{article}
+\usepackage{aaai}
+\usepackage{times}
+\usepackage{helvet}
+\usepackage{courier}
+\frenchspacing
+\pdfinfo{
+/Title (Formatting Instructions for Authors Using LaTeX)
+/Subject (AAAI Publications)
+/Author (AAAI Press)}
+\setcounter{secnumdepth}{0}  
+ \begin{document}
+% The file aaai.sty is the style file for AAAI Press 
+% proceedings, working notes, and technical reports.
+%
+\title{Optimal Planning using Pareto Optimality}
+%%\author{AAAI Press\\
+%Association for the Advancement of Artificial Intelligence\\
+%2275 East Bayshore Road, Suite 160\\
+%Palo Alto, California 94303\\
+%}
+
+\maketitle
+\begin{abstract}
+\begin{quote}
+  Planning problems differ from more typical search problems in a
+  number of ways.  One important difference is that many states are
+  very similar to one another, but not necessarily in a way that
+  is easily expressed using a standard heuristic function.  We
+  describe a new optimal search algorithm for planning that leverages
+  a partial order relation between states. Under suitable conditions,
+  states that are dominated by another with respect to this order
+  can be pruned while provably maintaining optimality.  Moreover,
+  using our algorithm, we show how to incorporate plans found by
+  non-optimal heuristic planners while still maintaining optimality.
+  We describe how to automatically discover these compatible partial
+  orders in serial and concurrent domains.  In our experiments we
+  find that more than 99\% of search nodes can be pruned in some
+  domains.
+\end{quote}
+\end{abstract}
+
+\section{Introduction}
+
+Compared to other search problems commonly considered in artificial
+intelligence, planning is characterized by states that are ``similar''
+along one or more dimensions.  For instance, in a job shop domain,
+one search state might have more widgets---but fewer sprockets---than
+another. On the other hand, there might be another state that has
+more widgets and sprockets than both states in a shorter amount of
+time. Assuming that more is always better, we can safely discard
+these two \textit{dominated} states, instead focusing our search
+on the better state.
+
+In this paper, we seek to formalize this notion, using Pareto
+dominance to prune states that are strictly dominated by some other
+states. More specifically, we give conditions under which we need
+only consider those states that are not dominated by any another
+state, also known as the \textit{skyline}. Our system, Skyplan, is
+a refinement of A$^*$ that expands only those states that are on
+the skyline. (XXX first and second sentence of this para are kinda
+redundant.)
+
+XXX somewhere in here, we need to say why we can't put this in the heuristic.
+
+Moreover, we describe how to incorporate non-optimal, heuristic
+plans into Skyplan by not expanding states.  We believe this is the
+first search procedure that can safely use information from non-optimal
+search algorithms for optimal search. Moreover, we describe how to
+convert a combination of a heuristic planner with Skyplan to produce
+an anytime search algorithm, similar to that proposed in XXX.
+
+In our experiments, we compare Skyplan to a similar implementation of $A^*$
+in domains based on real time strategy games. Furthermore, we compare
+our algorithm to an heuristic open source planner. XXX
+
+\section{Skyplan}
+
+\begin{figure}
+  \caption{Pareto Optimality figure}
+\end{figure}
+
+\subsection{Partial Orders}
+
+We are not the first to suggest the use of Pareto optimality or skyline queries
+in the context of planning. XXX By contrast, we are the first to define conditions
+under which we can \textit{prune} search states while still maintaining optimality.
+
+\subsection{Compatibility}
+\begin{figure}
+  \caption{Compatible partial orders. Partial orders stay ahead.}
+\end{figure}
+
+\subsection{Correctness}
+
+\section{Inferring Partial Orders}
+
+\section{Exploiting Heuristic Planners}
+
+\section{Experiments}
+
+\subsection{The StarCraft Domain}
+\begin{figure}
+  \caption{Nodes pruned table?}
+\end{figure}
+\subsection{The Settlers Domain}
+\subsection{The StarCraft 2 Domain}
+\begin{figure}
+  \caption{Plan length over time? Anytime plan length over time?}
+\end{figure}
+
+XXX stuff about Starcraft 2 and Evo Chamber
+XXX http://www.pcgamer.com/2010/11/02/computer-program-finds-devastating-starcraft-2-build-orders/
+
+\section{Conclusion}
+
+\end{document}

@@ -12,25 +12,23 @@ object AStarPlanner {
   def findPlan(inst: ProblemInstance) = {
     val goalAxioms = makeAxiomHeuristic(inst, inst.goal)
 
-    println(goalAxioms.map(inst.predicates.groundedByName.get _))
+    println(goalAxioms.map(inst.predicates.groundedIndex.get _))
 
 
-    // TODO: some actions satisfy more than one predicate.
-    def h(s: State) = {
-      val r = (goalAxioms -- s.axioms).size.toDouble
-      r
-    }
+    def h(s: State) = 0.0
 
     def succ(s: State, cost: Double) = {
-      s.possibleActions.map { case (a, list) =>
+      s.relevantActions.map { case grounding =>
+        val a = grounding.t
+        val list = grounding.args
         val c = s.copy
         val grounded = s.problem.actions.ground(a, list)
+        println(s, grounding)
         c.applyAction(grounded, a.durationOf(s, list))
-
-        (c, (a, list), 0.0)
-      }
+        (c, a, c.cost - cost)
+      }.toIndexedSeq
     }
-    AStarSearch.search(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, h = h _)
+    new AStarSearch[State].search(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, h = h _)
   }
 
   def makeAxiomHeuristic(inst: ProblemInstance, cond: IndexedCondition):BitSet = cond match {
@@ -41,7 +39,7 @@ object AStarPlanner {
       else
         BitSet.empty
     case _ => BitSet.empty
-
   }
+
 
 }

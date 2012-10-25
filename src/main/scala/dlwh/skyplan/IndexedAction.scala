@@ -17,6 +17,9 @@ case class IndexedAction(name: String,
     duration.map(_.valueWith(state.makeContext(args))).getOrElse(0.0)
   }
 
+  override def toString = "IndexedAction(" + name + ", " + signature+")"
+  def render = super.toString
+
 }
 
 

@@ -3,6 +3,7 @@ package dlwh.skyplan
 import breeze.collection.mutable.OpenAddressHashArray
 import collection.mutable
 import collection.mutable.ArrayBuffer
+import breeze.util.Encoder
 
 /**
  * Created with IntelliJ IDEA.
@@ -69,5 +70,9 @@ class ActionQueue(actions: Grounding[IndexedAction]) {
         nextTime == other.nextTime && data.equals(other.data)
       case _ => false
     }
+  }
+
+  override def toString: String = {
+    data.activeIterator.map{ case (i, v) => actions.groundedIndex.get(i) -> v}.mkString("ActionQueue(nextTime=" + nextTime+ ", queue=[", "," ,"])")
   }
 }
