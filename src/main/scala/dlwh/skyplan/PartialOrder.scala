@@ -209,13 +209,19 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
     else breeze.util.TODO
   }
 
-  def compareStates(first: State, second: State) : PartialOrder = {
+  def isDominatedBy(first: State, second: State): Boolean = {
+    val cmp = compareStates(first, second, true)
+    cmp == IsDominated
+  }
+
+  def compareStates(first: State, second: State, shortCircuitOnDominates: Boolean = false) : PartialOrder = {
     var cmp : PartialOrder = LessIsBetter.orderResourceQuantities(first.time, second.time)
     for (r : Int <- first.resources.keySet union second.resources.keySet) {
       val o = resourceOrders(r)
       if (o != null) {
         cmp = cmp combine o.orderResourceQuantities(first.resources(r), second.resources(r))
         if (cmp == NonComparable) return cmp
+        if (shortCircuitOnDominates && cmp == Dominates) return cmp
       }
     }
     for (a : Int <- first.axioms | second.axioms) {
@@ -223,6 +229,7 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
       if (o != null) {
         cmp = cmp combine o.orderAxiomTruth(first.axioms.contains(a), second.axioms.contains(a))
         if (cmp == NonComparable) return cmp
+        if (shortCircuitOnDominates && cmp == Dominates) return cmp
       }
     }
 
@@ -261,6 +268,7 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
       actionCmp = adjustForActionEffects(action, actionCmp)
       cmp = cmp combine actionCmp
       if (cmp == NonComparable) return cmp
+      if (shortCircuitOnDominates && cmp == Dominates) return cmp
     }
 
     cmp
