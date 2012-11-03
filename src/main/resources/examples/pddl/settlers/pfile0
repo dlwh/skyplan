@@ -4,10 +4,6 @@
 	location0 - place
 	location1 - place
 	vehicle0 - vehicle
-	vehicle1 - vehicle
-	vehicle2 - vehicle
-	vehicle3 - vehicle
-	vehicle4 - vehicle
 )
 (:init
 	(= (resource-use) 0)
@@ -35,14 +31,10 @@
 	(= (available coal location1) 0)
 	(connected-by-land location0 location1)
 	(potential vehicle0)
-	(potential vehicle1)
-	(potential vehicle2)
-	(potential vehicle3)
-	(potential vehicle4)
 )
 (:goal (and
 	(has-cabin location0)
-  (>= (available timber location0) 10)
+  (>= (available timber location0) 8)
 	)
 )
 

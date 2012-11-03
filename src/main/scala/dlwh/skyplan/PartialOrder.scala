@@ -96,6 +96,14 @@ case object CrazyAxiom extends AxiomOrdering {
 
 case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffects: Boolean = true) {
   val (resourceOrders, axiomOrders) = inferOrderings
+  val (goodAxioms, badAxioms, crazyAxioms) = {
+    val byType = (0 until axiomOrders.length).groupBy(axiomOrders)
+    val good = byType.get(GoodAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty)
+    val bad = byType.get(BadAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty)
+    val crazy = byType.get(CrazyAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty)
+
+    (good, bad, crazy)
+  }
 //  for (i <- 0 until problem.valFuns.size) {
 //    println(problem.valFuns.groundedByName.get(i) + "(" + i + "): " + resourceOrders(i))
 //  }
@@ -145,6 +153,7 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
   def inferOrderings : (Array[ResourceOrdering], Array[AxiomOrdering]) = {
     val ro = new Array[ResourceOrdering](problem.valFuns.size)
     val ao = new Array[AxiomOrdering](problem.predicates.size)
+    val goodAxioms, badAxioms, crazyAxioms = mutable.BitSet.empty
     applyOrderingsForCondition(problem.goal, EvalContext.emptyContext, ro, ao)
     applyToAll(ro, LessIsBetter, allVars(problem.metricExp, false, EvalContext.emptyContext))
     for ((action, actionArgs) <- problem.allGroundedActions) {
@@ -210,20 +219,40 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
   }
 
   def isDominatedBy(first: State, second: State): Boolean = {
-    val cmp = compareStates(first, second, true)
+    val cmp = compareStates(first, second, shortCircuitOnDominates = true)
     cmp == IsDominated
   }
 
   def compareStates(first: State, second: State, shortCircuitOnDominates: Boolean = false) : PartialOrder = {
     var cmp : PartialOrder = LessIsBetter.orderResourceQuantities(first.time, second.time)
-    for (r : Int <- first.resources.keySet union second.resources.keySet) {
-      val o = resourceOrders(r)
-      if (o != null) {
-        cmp = cmp combine o.orderResourceQuantities(first.resources(r), second.resources(r))
-        if (cmp == NonComparable) return cmp
-        if (shortCircuitOnDominates && cmp == Dominates) return cmp
+
+
+    // if they differ at all.
+    if(first.axioms != second.axioms) {
+      val first_xor_second = (first.axioms ^ second.axioms)
+      if((first_xor_second & crazyAxioms).nonEmpty) return NonComparable
+
+      val first_minus_second = (first.axioms &~ second.axioms)
+      val second_minus_first = (second.axioms &~ first.axioms)
+
+      val extraGood = (first_minus_second & goodAxioms).nonEmpty
+      val fewerGood = (second_minus_first & goodAxioms).nonEmpty
+      val extraBad = (first_minus_second & badAxioms).nonEmpty
+      val fewerBad = (second_minus_first & badAxioms).nonEmpty
+      if( (extraGood && fewerGood) || (extraBad && fewerBad) ) {
+        cmp = NonComparable
+      } else if(extraGood && !extraBad) {
+        cmp = cmp combine Dominates
+      } else if(fewerGood && !fewerBad) {
+        cmp = cmp combine IsDominated
+      } else {
+        cmp = NonComparable
       }
     }
+
+    if (cmp == NonComparable) return cmp
+    if (shortCircuitOnDominates && cmp == Dominates) return cmp
+
     for (a : Int <- first.axioms | second.axioms) {
       val o = axiomOrders(a)
       if (o != null) {
@@ -233,8 +262,44 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
       }
     }
 
-    for (action : Int <- mutable.BitSet.empty ++ first.pendingActions.data.activeKeysIterator ++
-      second.pendingActions.data.activeKeysIterator) {
+    val visited = collection.mutable.BitSet.empty
+    var i = 0
+    while(i < first.resources.iterableSize) {
+      if(first.resources.isActive(i)) {
+        val r = first.resources.index(i)
+        val v1 = first.resources.data(i)
+        visited += r
+        val o = resourceOrders(r)
+        if (o != null) {
+          cmp = cmp combine o.orderResourceQuantities(v1, second.resources(r))
+          if (cmp == NonComparable) return cmp
+          if (shortCircuitOnDominates && cmp == Dominates) return cmp
+        }
+      }
+      i += 1
+    }
+
+    i = 0
+    while(i < second.resources.iterableSize) {
+      if(second.resources.isActive(i)) {
+        val r = second.resources.index(i)
+        if(!visited(r)) {
+          val v2 = second.resources.data(i)
+          val o = resourceOrders(r)
+          if (o != null) {
+            cmp = cmp combine o.orderResourceQuantities(0, v2)
+            if (cmp == NonComparable) return cmp
+            if (shortCircuitOnDominates && cmp == Dominates) return cmp
+          }
+        }
+      }
+      i += 1
+    }
+
+
+
+    for (action : Int <- (first.pendingActions.data.activeKeysIterator ++
+      second.pendingActions.data.activeKeysIterator).toSet) {
       val q1 = if (first.pendingActions.data.contains(action)) first.pendingActions.data(action).clone()
                else mutable.Queue.empty[Double]
       val q2 = if (second.pendingActions.data.contains(action)) second.pendingActions.data(action).clone()
