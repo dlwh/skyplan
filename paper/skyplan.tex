@@ -4,6 +4,18 @@
 \usepackage{times}
 \usepackage{helvet}
 \usepackage{courier}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{algorithm}
+\usepackage{amsthm}
+\theoremstyle{plain} \newtheorem{theorem}{Theorem} \newtheorem{proposition}{Proposition} \newtheorem{lemma}{Lemma} \newtheorem*{corollary}{Corollary}
+
+\theoremstyle{definition} \newtheorem{definition}{Definition} \newtheorem{conjecture}{Conjecture} \newtheorem*{example}{Example} 
+
+\theoremstyle{remark} \newtheorem*{remark}{Remark} \newtheorem*{note}{Note} \newtheorem{case}{Case}
+
+
 \frenchspacing
 \pdfinfo{
 /Title (Formatting Instructions for Authors Using LaTeX)
@@ -81,18 +93,137 @@ our algorithm to an heuristic open source planner. XXX
   \caption{Pareto Optimality figure}
 \end{figure}
 
+We operate in the standard convention of planning as search within a weighted directed graph. Let
+A planning problem consists of a directed graph $G$ with nodes $n$ consisting of planning states,
+states are linked by directed edges $a$ corresponding to actions within plan space. We associate
+a cost function $\mathrm{cost}(n_s,a,n_t) \in \mathbb R^+$ for taking action $a$ in state $n_s$ yielding a result $n_t$.
+XXX There is also a privileged initial state $n_i$, along with a set of goal states $F$. 
+Further define $g(n)$ to be the minimum cost path from $n_i$ to any node $n$. Our
+goal is to find a path from $n_i$ to some state $n_g \in F$ with the lowest g cost..
+
+
 \subsection{Partial Orders}
+
+
+
+We will further assume that our graph is endowed with a partial order $\prec$
+that relates nodes $n$ to one another, with the intuitive semantics that
+$n \prec m$ if $n$ is no better than $m$ in any way. For example, in
+our sprockets and widgets example, $n \prec m$ if $n$ has no more widgets and
+no more sprockets than $m$ and if $g(n) \ge g(m)$. 
+
+Our goal is to define an optimal search algorithm that can exploit
+this partial order to reduce the search space significantly by only
+expanding nodes $n$ that are \textit{weakly Pareto optimal}, that
+is nodes $n$ with $n \nprec n'$ for all nodes $n'$. For any set of
+nodes $N$, we define the \textit{skyline} of that set as
+$\textrm{skyline}(N)=\{n: \ne n' \in N: n \prec n'\}$. That is, the
+skyline of a set is those nodes which are weakly Pareto optimal.
+In subsequent sections, we will give a useful sufficient condition under
+which we can exploit a partial order while preserving correctness of optimal graph
+search algorithms.
 
 We are not the first to suggest the use of Pareto optimality or skyline queries
 in the context of planning. XXX By contrast, we are the first to define conditions
 under which we can \textit{prune} search states while still maintaining optimality.
+
+
+\subsection{Algorithm}
+
+Skyplan is a fairly straightforward modifications of Uniform
+Cost Search or A$^*$. For the sake of exposition, we focus on Uniform Cost
+Search, though A$^*$ or any optimal graph search algorithm can
+be modified in the same way.
+
+Skyplan is defined in Algorithm \ref{alg:skyplan}. Essentially, we run Uniform Cost Search as normal, except that 
+we only expand nodes that are not strictly dominated by another
+node we've either expanded or enqueued for expansion.
+
+\begin{algorithm}
+\begin{enumerate}
+\item Initialize: $Open=\{\langle s,0\rangle\}$, $Closed=\{\}$,
+$Pruned=\{\}$
+\item Pop the min-cost path $\mathbf{n}\in Open$, $\mathbf{n}\rightarrow Closed$
+
+\begin{enumerate}
+\item If $n\in T$: return $\langle n,prev(n),\hat{h}(s,n)\rangle$
+\end{enumerate}
+\item $\forall n\prime\in\Gamma(n)$, let $\mathbf{n\prime}=\langle n\prime,n,\hat{h}(s,n)+cost(n,n\prime)\rangle$:
+
+\begin{enumerate}
+\item If $\exists\mathbf{m}\in Open\cup Closed\,:\,\mathbf{m}\succeq\mathbf{n\prime}$:
+$\mathbf{n\prime}\rightarrow Pruned$
+\item Else: 
+
+\begin{enumerate}
+\item Let $Prunable(\mathbf{n\prime})=\{\mathbf{m}\in Open\,:\,\mathbf{n\prime}\succeq\mathbf{m}\}$
+\item $Open=Open-Prunable(\mathbf{n\prime})$
+\item $\mathbf{n\prime}\rightarrow Open$ 
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+\caption{Skyplan}
+\label{alg:skyplan}
+\end{algorithm}
 
 \subsection{Compatibility}
 \begin{figure}
   \caption{Compatible partial orders. Partial orders stay ahead.}
 \end{figure}
 
-\subsection{Correctness}
+Not just any partial order on nodes can be used to preserve optimality. As a perverse
+example, we can define a partial order under which all nodes on the optimal path
+are dominated by non-optimal nodes. Thus, we need to define a property
+under which a partial order is \textit{compatible} with a search graph. While
+a broad class of partial orders might work, we have identified a particular 
+property that is especially applicable to planning problems:
+
+\begin{definition}[Compatibility]
+  A partial order $\prec$ is \textit{compatible} if for all nodes $n \preceq m$,
+  \begin{enumerate}
+    \item $g(n) \ge g(m)$ and 
+    \item $\forall n' \in \mathrm{succ(n)}$ $\exists m' \in \mathrm{succ}(m')$ such that $n' \preceq m'$.
+  \end{enumerate}
+\end{definition}
+This recursive definition of compatibility essentially means that if a node $n$
+is dominated by a node $m$, then it must be the case that $n$ is no cheaper than $m$
+and that $m$'s successors ``stay ahead'' of $n$'s. It is worth mentioning that
+there is always a compatible partial ordering: the trivial order with $n \npreceq m$ for all
+nodes $n$ and $m$.
+
+In planning problems, defining a compatible partial order is usually quite easy. For
+resources where ``more is better''. In the sequel, we discuss a standard structure
+for these partial orders, as well as how to automatically infer a partial order
+from the specification of a planning problem.
+
+
+
+
+The task is to find the shortest path from $s$ to a goal node in
+$T$. We use Uniform Cost Search with the addition of pruning. Three
+sets $Open$, $Closed$, $Pruned$ (not used in algorithm, just proof)
+whose elements are triples $\mathbf{n=}\langle n,\, prev(n),\,\hat{h}(s,n)\rangle$
+where $\hat{h}(s,n)$ is our current best guess for the minimum cost
+from $s$ to $n$. By following the prev pointers (through Open and
+Closed), we can reconstruct a path from $s$ to $n$. Thus, we can
+think of these triples as paths themselves. By the operation $\langle n,prev(n),\hat{h}(s,n)\rangle\rightarrow Open$,
+(resp. Closed and Pruned), we mean that we replace/update any element
+of $\langle n,*,*\rangle\in Open$ with $\langle n,prev(n),\hat{h}(s,n)\rangle$,
+adding it if no such element exists.
+
+\subsection{Analysis}
+
+\textbf{Theorem:} If $\succeq$ is a compatible partial order, S{*}
+is \emph{complete }and \emph{optimal}.
+
+\textbf{Proof:} Can we appeal to the fact that we are essentially
+modifying UCS? In that case, we must simply show that we never prune
+an optimal path to the goal (or, more accurately, there is an optimal
+path to the goal which we do not prune).
+
+\textbf{Theorem:} S{*} is \emph{optimally efficient}.
+
+\textbf{Proof:} I haven't even thought about if this is true or not.
 
 \section{Inferring Partial Orders}
 
