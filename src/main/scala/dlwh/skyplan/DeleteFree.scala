@@ -18,13 +18,15 @@ object DeleteFree {
 
     for(a <- actions.index) {
       val deleteFree = convertAction(a)
-      newIndex.index(a)
+      newIndex.index(deleteFree)
       map += (a -> deleteFree)
     }
 
     for (a <- actions.groundedIndex) {
-      newGrounded.index(a.copy(map(a.t)))
+      newGrounded.index(Grounded(map(a.t), a.args, a.unindexedArgs))
     }
+//    assert(newIndex.toString == actions.index.toString, newIndex + " " + actions.index)
+//    assert(newGrounded.toString == actions.groundedIndex.toString, newGrounded + " " + actions.groundedIndex)
 
     actions.copy(newIndex,groundedIndex=newGrounded)
   }

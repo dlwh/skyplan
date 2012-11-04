@@ -38,8 +38,7 @@ class AStarPlannerTest  extends FunSuite {
 
     try {
 
-      val instance = ProblemInstance.fromPDDL(domain, problem)
-      val init = instance.initialState
+      val instance = ProblemInstance.fromPDDL(domain, problem).deleteFreeVersion
       val plan = Skyplan.findPlan(instance)
       assert(plan.nonEmpty,plan)
     } catch {

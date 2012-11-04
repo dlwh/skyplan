@@ -200,6 +200,8 @@ case class Grounding[T](index: Index[T],
                      groundings: Array[Array[Int]],
                      objects: Index[String]) {
 
+  require(groundedIndex.forall(g => index.contains(g.t) || (throw new RuntimeException(g.toString + " " + index))))
+
   def size = groundedIndex.size
 
   def ground(predicate: Int, args: IndexedSeq[Int]):Int = {
@@ -211,7 +213,8 @@ case class Grounding[T](index: Index[T],
   }
 
   def ground(predicate: T, args: IndexedSeq[Int]):Int = {
-    ground(index(predicate), args)
+    val ind = index(predicate)
+    ground(ind, args)
   }
 
   def unground(groundedIndex: Int): T = {

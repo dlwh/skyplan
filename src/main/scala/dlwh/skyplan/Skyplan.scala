@@ -30,7 +30,6 @@ object Skyplan {
          val list = grounding.args
          val c = s.copy
          val grounded = s.problem.actions.ground(a, list)
-//         println(s, grounding)
          c.applyAction(grounded, a.durationOf(s, list))
          (c, a, c.cost - cost)
        }.toIndexedSeq
