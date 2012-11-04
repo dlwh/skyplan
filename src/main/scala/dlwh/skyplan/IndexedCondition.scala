@@ -137,3 +137,12 @@ case class PredicateCondition(predicateId: Int, args: IndexedSeq[CellExpression]
     else resourceSummary(state.problem, IndexedSeq.empty)
   }
 }
+
+
+object TrueCondition extends IndexedCondition {
+  def holds(s: State, context: EvalContext): Boolean = true
+
+  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = ResourceSummary.empty
+
+  def computeMissingSummary(state: State): ResourceSummary = ResourceSummary.empty
+}

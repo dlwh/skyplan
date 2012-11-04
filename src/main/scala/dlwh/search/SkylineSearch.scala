@@ -1,8 +1,6 @@
 package dlwh.search
 
 import collection.mutable
-import java.util.Comparator
-import collection.mutable.ArrayBuffer
 import java.util
 
 

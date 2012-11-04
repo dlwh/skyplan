@@ -105,10 +105,10 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
     (good, bad, crazy)
   }
 //  for (i <- 0 until problem.valFuns.size) {
-//    println(problem.valFuns.groundedByName.get(i) + "(" + i + "): " + resourceOrders(i))
+//    println(problem.valFuns.groundedIndex.get(i) + "(" + i + "): " + resourceOrders(i))
 //  }
 //  for (i <- 0 until problem.predicates.size) {
-//    println(problem.predicates.groundedByName.get(i) + "(" + i + "): " + axiomOrders(i))
+//    println(problem.predicates.groundedIndex.get(i) + "(" + i + "): " + axiomOrders(i))
 //  }
 
   def baseConditions(condition: IndexedCondition, flip: Boolean): Seq[(IndexedCondition, Boolean)] = {

@@ -22,7 +22,6 @@ case class State(problem: ProblemInstance,
                  pendingActions: ActionQueue) {
 
 
-
   override def hashCode = {
     (time,axioms).hashCode
   }
@@ -56,6 +55,7 @@ case class State(problem: ProblemInstance,
   def hasAction() = {
     pendingActions.nextTime != Double.PositiveInfinity
   }
+
 
   def elapseTime(delta: Double = -1) {
     val newTime = if(delta > 0) time + delta else (pendingActions.nextTime)
@@ -109,6 +109,19 @@ case class State(problem: ProblemInstance,
     sb ++= ")"
 
     sb.toString
+  }
+
+  def resource(name: String, args: String*) = {
+    import problem._
+    val resource = valFuns.ground(valFuns.index(valFuns.index.find(_ == name).get), args.map(objects.index).toIndexedSeq)
+    resources(resource)
+  }
+
+
+  def hasAxiom(name: String, args: String*): Boolean = {
+    import problem._
+    val resource = predicates.ground(predicates.index(predicates.index.find(_ == name).get), args.map(objects.index).toIndexedSeq)
+    axioms(resource)
   }
 }
 
@@ -165,6 +178,7 @@ case class ProblemInstance(objects: GroundedObjects,
 
   lazy val dominanceChecker = DominanceChecker(this)
 
+  def deleteFreeVersion = DeleteFree.convertProblemInstance(this)
 }
 
 

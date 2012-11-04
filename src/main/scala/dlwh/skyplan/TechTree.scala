@@ -58,14 +58,14 @@ object TechTree {
       }
     }
 
-    for(i <- 0 until resourceProviders.length) {
-      println(inst.valFuns.groundedIndex.get(i) + " providers: " + resourceProviders(i).map(inst.allViableGroundedActions))
-    }
+//    for(i <- 0 until resourceProviders.length) {
+//      println(inst.valFuns.groundedIndex.get(i) + " providers: " + resourceProviders(i).map(inst.allViableGroundedActions))
+//    }
 
 
-    for(i <- 0 until axiomProviders.length) {
-      println(inst.predicates.groundedIndex.get(i) + " providers: " + axiomProviders(i).map(inst.allViableGroundedActions))
-    }
+//    for(i <- 0 until axiomProviders.length) {
+//      println(inst.predicates.groundedIndex.get(i) + " providers: " + axiomProviders(i).map(inst.allViableGroundedActions))
+//    }
 
     // figure out who depends on who. Ugh.
     // rp = resourceProvider, etc.
