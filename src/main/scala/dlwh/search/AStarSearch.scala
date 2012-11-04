@@ -29,7 +29,6 @@ class AStarSearch[T] {
     while(queue.nonEmpty) {
       val cur = queue.dequeue()
       val t = cur.t
-      println(cur.estimate)
 
       if(isGoal(t)) {
         return Some(cur.path.reverse -> cur.cost)
