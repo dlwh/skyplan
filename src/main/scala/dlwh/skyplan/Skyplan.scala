@@ -2,6 +2,7 @@ package dlwh.skyplan
 
 import dlwh.search.{SkylineSearch, AStarSearch}
 import io.Source
+import collection.immutable.IndexedSeq
 
 /**
  * 
@@ -24,15 +25,18 @@ object Skyplan {
     }
      def h(s: State) = 0.0
 
-     def succ(s: State, cost: Double) = {
-       s.relevantActions.map { case grounding =>
+     def succ(s: State, cost: Double): IndexedSeq[(State, Option[IndexedAction], Double)] = {
+       val do_actions = s.relevantActions.map { case grounding =>
          val a = grounding.t
          val list = grounding.args
          val c = s.copy
          val grounded = s.problem.actions.ground(a, list)
          c.applyAction(grounded, a.durationOf(s, list))
-         (c, a, c.cost - cost)
+         (c, Some(a), c.cost - cost)
        }.toIndexedSeq
+
+       if(s.hasAction()) do_actions :+ { val s2 = s.copy; s2.elapseTime(); (s2, None, s2.cost - cost)}
+       else do_actions
      }
      new SkylineSearch[State].search(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, h = h _)
    }
@@ -42,10 +46,10 @@ object Skyplan {
     def slurpResource(str: String) =  {
       Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
     }
-    val input = slurpResource("examples/pddl/settlers/domain.pddl")
-    val input2 = slurpResource("examples/pddl/settlers/pfile0")
-//    val input = slurpResource("examples/pddl/woodworking/p01-domain.pddl")
-//    val input2 = slurpResource("examples/pddl/woodworking/p01.pddl")
+//    val input = slurpResource("examples/pddl/settlers/domain.pddl")
+//    val input2 = slurpResource("examples/pddl/settlers/pfile0")
+    val input = slurpResource("examples/pddl/woodworking/p01-domain.pddl")
+    val input2 = slurpResource("examples/pddl/woodworking/p01.pddl")
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
 
