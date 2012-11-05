@@ -96,6 +96,7 @@ case object CrazyAxiom extends AxiomOrdering {
 
 case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffects: Boolean = true) {
   val (resourceOrders, axiomOrders) = inferOrderings
+  val timeOrder = resourceOrders(problem.valFuns.ground(problem.totalTimeIndex, IndexedSeq()))
   val (goodAxioms, badAxioms, crazyAxioms) = {
     val byType = (0 until axiomOrders.length).groupBy(axiomOrders)
     val good = byType.get(GoodAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty)
@@ -153,7 +154,6 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
   def inferOrderings : (Array[ResourceOrdering], Array[AxiomOrdering]) = {
     val ro = new Array[ResourceOrdering](problem.valFuns.size)
     val ao = new Array[AxiomOrdering](problem.predicates.size)
-    val goodAxioms, badAxioms, crazyAxioms = mutable.BitSet.empty
     applyOrderingsForCondition(problem.goal, EvalContext.emptyContext, ro, ao)
     applyToAll(ro, LessIsBetter, allVars(problem.metricExp, false, EvalContext.emptyContext))
     for ((action, actionArgs) <- problem.allGroundedActions) {
@@ -220,12 +220,16 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
 
   def isDominatedBy(first: State, second: State): Boolean = {
     val cmp = compareStates(first, second, shortCircuitOnDominates = true)
-    cmp == IsDominated
+    cmp == IsDominated || cmp == Equals
   }
 
   def compareStates(first: State, second: State, shortCircuitOnDominates: Boolean = false) : PartialOrder = {
-    var cmp : PartialOrder = LessIsBetter.orderResourceQuantities(first.time, second.time)
-
+    var cmp : PartialOrder = Equals
+    if(timeOrder != null) {
+      cmp = cmp combine timeOrder.orderResourceQuantities(first.time, second.time)
+      if (cmp == NonComparable) return cmp
+      if (shortCircuitOnDominates && cmp == Dominates) return cmp
+    }
 
     // if they differ at all.
     if(first.axioms != second.axioms) {

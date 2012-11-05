@@ -84,6 +84,7 @@ case class State(problem: ProblemInstance,
 
     def resource(fn: Int, args: IndexedSeq[Int]): Double = {
       try {
+        if (fn == problem.totalTimeIndex) time else
         resources(problem.valFuns.ground(fn, args))
       } catch {
         case e:Exception =>
@@ -136,6 +137,8 @@ case class ProblemInstance(objects: GroundedObjects,
                            metricExp: ValExpression,
                            goal: IndexedCondition,
                            initEffect: IndexedEffect) {
+
+  lazy val totalTimeIndex = valFuns.index("total-time")
 
   def metric(s: State) = {
     metricExp.valueWith(s.makeContext(IndexedSeq()))
@@ -332,6 +335,11 @@ object ProblemInstance {
     val grndNumByName = Index[Grounded[String]]()
     val groundingsN = new ArrayBuffer[Array[Int]]()
     val inverseN = ArrayBuffer[Int]()
+
+    // Special placeholder value for time spent
+    numericIndex.index("total-time")
+    groundingsN += groundFluent(objs, PDDL.Function("total-time", IndexedSeq.empty), grndNumByName)
+    inverseN ++= Array.fill(groundingsN.last.length)(groundingsN.length - 1)
 
     for( (name, f) <- functions) {
       f.resultType match {

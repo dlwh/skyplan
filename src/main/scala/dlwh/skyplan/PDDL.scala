@@ -323,7 +323,7 @@ object PDDL {
 
 
   trait LispTokens { this: RegexParsers =>
-    protected override val whiteSpace = """(\s|;;.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
+    protected override val whiteSpace = """(\s|;.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
     val name:Parser[String] =  """[a-zA-Z_@~%!=#<>\+\^\&][0-9a-zA-Z_@~%!=#<>\+\*\^\&\-]*""".r
     val variable:Parser[String] =  "?" ~> name
     val number:Parser[Number] =  "[0-9]+".r ^^ { x => Number(x.replace("\\.","").toDouble)}

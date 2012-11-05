@@ -47,5 +47,25 @@ class AStarPlannerTest  extends FunSuite {
       throw e
     }
   }
+
+  test("Woodworking 1") {
+    val input = slurpResource("examples/pddl/woodworking/p01-domain.pddl")
+    val input2 = slurpResource("examples/pddl/woodworking/p01.pddl")
+    val domain = PDDL.parseDomain(input)
+    val problem = PDDL.parseProblem(input2)
+
+
+    try {
+
+      val instance = ProblemInstance.fromPDDL(domain, problem)
+      print(instance.valFuns)
+      val plan = Skyplan.findPlan(instance)
+      assert(plan.nonEmpty,plan)
+    } catch {
+      case e =>
+        e.printStackTrace()
+        throw e
+    }
+  }
   */
 }

@@ -1,6 +1,6 @@
 package dlwh.skyplan
 
-import dlwh.skyplan.PDDL.BinaryComp
+import dlwh.skyplan.PDDL.{Start, BinaryComp}
 import breeze.util.Index
 import breeze.linalg.HashVector
 import collection.immutable.BitSet
@@ -21,6 +21,8 @@ object IndexedCondition {
     def rec(cond: PDDL.Condition, varBindings: Index[String]):IndexedCondition =  {
       try {
         cond match {
+          case PDDL.TimedCondition(Start, base) =>
+            fromCondition(base, preds, valFunctions, locals, globals)
           case PDDL.AndCondition(conjuncts) =>
             AndCondition(conjuncts.map(rec(_, varBindings)))
           case PDDL.FComp(comp, arg1, arg2) =>
