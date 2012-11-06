@@ -48,8 +48,10 @@ object Skyplan {
     }
 //    val input = slurpResource("examples/pddl/settlers/domain.pddl")
 //    val input2 = slurpResource("examples/pddl/settlers/pfile0")
-    val input = slurpResource("examples/pddl/woodworking/p01-domain.pddl")
-    val input2 = slurpResource("examples/pddl/woodworking/p01.pddl")
+//    val input = slurpResource("examples/pddl/woodworking/p01-domain.pddl")
+//    val input2 = slurpResource("examples/pddl/woodworking/p01.pddl")
+    val input = slurpResource("examples/pddl/openstacks/p01-domain.pddl")
+    val input2 = slurpResource("examples/pddl/openstacks/p01.pddl")
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
 
