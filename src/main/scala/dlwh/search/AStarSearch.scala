@@ -7,15 +7,12 @@ import collection.mutable
  * 
  * @author dlwh
  */
-class AStarSearch[T] {
-  def search[Action](init: T,
-                successors: (T,Double)=>IndexedSeq[(T, Action, Double)],
-                isGoal: T=>Boolean,
-                h: T=>Double = ( (x:T) => 0.0),
-                treeSearch: Boolean = false):Option[(Path[T, Action], Double)] = {
+class AStarSearch[T, Action](treeSearch: Boolean = false) {
+  def search(problem: SearchProblem[T, Action]):Option[(Path[T, Action], Double)] = {
+    import problem._
     case class State(path: Path[T, Action], cost: Double, heur: Double) {
       def t = path.head
-      def next = successors(path.head, cost)
+      def next: IndexedSeq[(T, Action, Double)] = successors(path.head, cost)
 
       def estimate = cost + heur
     }
@@ -25,9 +22,9 @@ class AStarSearch[T] {
     val queue = new mutable.PriorityQueue[State]()
     val visited = new mutable.HashSet[T]()
 
-    queue += State(End(init), 0, h(init))
+    queue += State(End(init), 0, heuristic(init))
     while(queue.nonEmpty) {
-      val cur = queue.dequeue()
+      val cur: State = queue.dequeue()
       val t = cur.t
 
       if(isGoal(t)) {
@@ -39,7 +36,7 @@ class AStarSearch[T] {
 
       for( (s,a,c) <- cur.next) {
         if(treeSearch || !visited(s))
-          queue += State(cur.path.prepend(s, a), c + cur.cost, h(s))
+          queue += State(cur.path.prepend(s, a), c + cur.cost, heuristic(s))
       }
 
     }

@@ -1,6 +1,6 @@
 package dlwh.skyplan
 
-import dlwh.search.AStarSearch
+import dlwh.search.{SearchProblem, AStarSearch}
 import collection.immutable.BitSet
 import dlwh.skyplan.Expression.Global
 
@@ -12,9 +12,6 @@ object AStarPlanner {
   def findPlan(inst: ProblemInstance) = {
     val goalAxioms = makeAxiomHeuristic(inst, inst.goal)
 
-    println(goalAxioms.map(inst.predicates.groundedIndex.get _))
-
-
     def h(s: State) = 0.0
 
     def succ(s: State, cost: Double) = {
@@ -25,10 +22,10 @@ object AStarPlanner {
         val grounded = s.problem.actions.ground(a, list)
         println(s, grounding)
         c.applyAction(grounded, a.durationOf(s, list))
-        (c, a, c.cost - cost)
+        (c, grounding, c.cost - cost)
       }.toIndexedSeq
     }
-    new AStarSearch[State].search(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, h = h _)
+    new AStarSearch[State, Grounded[IndexedAction]].search(SearchProblem(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, heuristic = h _))
   }
 
   def makeAxiomHeuristic(inst: ProblemInstance, cond: IndexedCondition):BitSet = cond match {

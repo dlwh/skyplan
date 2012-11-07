@@ -35,8 +35,8 @@ class AStarSearchTest extends FunSuite {
     )
 
 
-    val astar = new AStarSearch[Symbol]()
-    val (path, cost) = astar.search('s, succ _, {(_:Symbol) == 'g}, h).get
+    val astar = new AStarSearch[Symbol, Unit]()
+    val (path, cost) = astar.search(SearchProblem('s, succ _, {(_:Symbol) == 'g}, h)).get
     val syms = path.toStateList
     assert(syms === List('s, 'd, 'e, 'g))
     assert(cost === 7.0)
