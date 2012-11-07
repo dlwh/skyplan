@@ -67,7 +67,7 @@ case class State(problem: ProblemInstance,
     time = newTime
   }
 
-  def isDominatedBy(other: State): Boolean = problem.dominanceChecker.isDominatedBy(this, other)
+  def isEqualToOrDominatedBy(other: State): Boolean = problem.dominanceChecker.isDominatedBy(this, other)
 
   def copy: State = {
     State(problem, time, resources.copy, axioms.clone(), pendingActions.clone())

@@ -34,8 +34,8 @@ class PartialOrderTest  extends FunSuite {
       val cmp = checker.compareStates(init, compare)
 
       assert(cmp === IsDominated)
-      assert((init isDominatedBy compare) == true)
-      assert((compare isDominatedBy init) == false)
+      assert((init isEqualToOrDominatedBy compare) == true)
+      assert((compare isEqualToOrDominatedBy init) == false)
 
     } catch {
       case e =>
@@ -63,15 +63,15 @@ class PartialOrderTest  extends FunSuite {
       val cmp = checker.compareStates(init, compare)
 
       assert(cmp === IsDominated)
-      assert((init isDominatedBy compare) == true)
-      assert((compare isDominatedBy init) == false)
+      assert((init isEqualToOrDominatedBy compare) == true)
+      assert((compare isEqualToOrDominatedBy init) == false)
 
-      compare.time += 1
+      compare.resources(instance.valFuns.ground("labour", IndexedSeq())) += 1
 
       val cmp2 = checker.compareStates(init, compare)
       assert(cmp2 === NonComparable)
-      assert((init isDominatedBy compare) == false)
-      assert((compare isDominatedBy init) == false)
+      assert((init isEqualToOrDominatedBy compare) == false)
+      assert((compare isEqualToOrDominatedBy init) == false)
 
     } catch {
       case e =>
@@ -100,8 +100,8 @@ class PartialOrderTest  extends FunSuite {
       val cmp = checker.compareStates(init, compare)
 
       assert(cmp === Dominates)
-      assert((init isDominatedBy compare) == false)
-      assert((compare isDominatedBy init) == true)
+      assert((init isEqualToOrDominatedBy compare) == false)
+      assert((compare isEqualToOrDominatedBy init) == true)
 
     } catch {
       case e =>
@@ -130,8 +130,8 @@ class PartialOrderTest  extends FunSuite {
       val cmp = checker.compareStates(init, compare)
 
       assert(cmp === Equals)
-      assert((init isDominatedBy compare) == false)
-      assert((compare isDominatedBy init) == false)
+      assert((init isEqualToOrDominatedBy compare) == true)
+      assert((compare isEqualToOrDominatedBy init) == true)
 
     } catch {
       case e =>
