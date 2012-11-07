@@ -1,6 +1,7 @@
 package dlwh.search
 
 sealed trait Path[+T, +Action] {
+
   def head: T
   def actionOpt: Option[Action]
 
@@ -25,6 +26,11 @@ sealed trait Path[+T, +Action] {
       case End(head) => this
       case Link(h, ma, rest) => rec(rest, ma, End(h))
     }
+  }
+
+  def map[U](f: T=>U):Path[U, Action] = this match {
+    case End(head) => End(f(head))
+    case Link(head, action, rest) => Link(f(head), action, rest.map(f))
   }
 }
 
