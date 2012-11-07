@@ -3,6 +3,7 @@ package dlwh.skyplan
 import dlwh.search.{SkylineSearch, AStarSearch}
 import io.Source
 import collection.immutable.IndexedSeq
+import java.util
 
 /**
  * 
@@ -10,19 +11,7 @@ import collection.immutable.IndexedSeq
  */
 object Skyplan {
   def findPlan(inst: ProblemInstance) = {
-    val checker = inst.dominanceChecker
-    implicit val ordering = new PartialOrdering[State] {
-      def tryCompare(x: State, y: State): Option[Int] = {
-        checker.compareStates(x,y) match {
-          case NonComparable => None
-          case IsDominated => Some(-1)
-          case Equals => Some(0)
-          case Dominates => Some(1)
-        }
-      }
-
-      def lteq(x: State, y: State): Boolean = checker.isDominatedBy(x,y)
-    }
+    implicit val ordering = makeOrdering(inst)
      def h(s: State) = 0.0
 
      def succ(s: State, cost: Double): IndexedSeq[(State, Option[IndexedAction], Double)] = {
@@ -38,9 +27,26 @@ object Skyplan {
        if(s.hasAction()) do_actions :+ { val s2 = s.copy; s2.elapseTime(); (s2, None, s2.cost - cost)}
        else do_actions
      }
+
      new SkylineSearch[State].search(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, h = h _)
    }
 
+
+  def makeOrdering(inst: ProblemInstance) = {
+    val checker = inst.dominanceChecker
+    new PartialOrdering[State] {
+      def tryCompare(x: State, y: State): Option[Int] = {
+        checker.compareStates(x, y) match {
+          case NonComparable => None
+          case IsDominated => Some(-1)
+          case Equals => Some(0)
+          case Dominates => Some(1)
+        }
+      }
+
+      def lteq(x: State, y: State): Boolean = checker.isDominatedBy(x, y)
+    }
+  }
 
   def main(args: Array[String]) {
     def slurpResource(str: String) =  {
