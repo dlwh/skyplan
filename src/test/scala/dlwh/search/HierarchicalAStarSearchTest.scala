@@ -129,9 +129,9 @@ class HierarchicalAStarSearchTest extends FunSuite {
       'e -> IndexedSeq('g -> 2.0),
       'g -> IndexedSeq(),
       // projected
-      // n.b. πs -> πe is wrong.
-      'πs -> IndexedSeq('πe -> 100.0, 'πb -> 2.0),
-      'πe -> IndexedSeq('πg -> 2.0),
+      // n.b. πe -> πg is wrong.
+      'πs -> IndexedSeq('πe -> 2.0, 'πb -> 2.0),
+      'πe -> IndexedSeq('πg -> 100.0),
       'πb -> IndexedSeq('πg -> 3.0),
       'πg -> IndexedSeq()
     )

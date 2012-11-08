@@ -1,8 +1,9 @@
 package dlwh.skyplan
 
-import dlwh.search.{SearchProblem, AStarSearch}
+import dlwh.search.{HierarchicalAStarSearch, SearchProblem, AStarSearch}
 import collection.immutable.BitSet
 import dlwh.skyplan.Expression.Global
+import io.Source
 
 /**
  * 
@@ -10,33 +11,59 @@ import dlwh.skyplan.Expression.Global
  */
 object HierarchicalAStarPlanner {
   def findPlan(inst: ProblemInstance) = {
-    val goalAxioms = makeAxiomHeuristic(inst, inst.goal)
-
-    def h(s: State) = 0.0
-
-    def succ(s: State, cost: Double) = {
-      s.relevantActions.map { case grounding =>
+    def succ(s: State, cost: Double): IndexedSeq[(State, Option[Grounded[IndexedAction]], Double)] = {
+      val do_actions = s.relevantActions(inst.goal).map { case grounding =>
         val a = grounding.t
         val list = grounding.args
         val c = s.copy
         val grounded = s.problem.actions.ground(a, list)
-        println(s, grounding)
         c.applyAction(grounded, a.durationOf(s, list))
-        (c, grounding, c.cost - cost)
+        (c, Some(grounding), c.cost - cost)
       }.toIndexedSeq
+
+      if(s.hasAction()) do_actions :+ { val s2 = s.copy; s2.elapseTime(); (s2, None, s2.cost - cost)}
+      else do_actions
     }
-    new AStarSearch[State, Grounded[IndexedAction]].search(SearchProblem(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, heuristic = h _))
+
+    val projected = projectionHierarchy(inst).map{ inst =>
+      SearchProblem(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())})
+    }
+
+    val search = new HierarchicalAStarSearch[State, Option[Grounded[IndexedAction]]]
+    search.search(projected, IndexedSeq.fill(projected.length - 1)(identity))
   }
 
-  def makeAxiomHeuristic(inst: ProblemInstance, cond: IndexedCondition):BitSet = cond match {
-    case AndCondition(conds) => conds.map(makeAxiomHeuristic(inst, _)).reduce(_ ++ _)
-    case PredicateCondition(i, args) =>
-      if(args.forall(_.isInstanceOf[Global]))
-        BitSet(inst.predicates.ground(i, args.map(_.asInstanceOf[Global].x)))
-      else
-        BitSet.empty
-    case _ => BitSet.empty
+    def projectionHierarchy(inst: ProblemInstance):IndexedSeq[ProblemInstance] = inst.goal match {
+      case AndCondition(conds) if conds.length > 1 => IndexedSeq(inst, inst.copy(goal=conds.head))
+      case _ =>  IndexedSeq(inst)
+    }
+
+
+  def main(args: Array[String]) {
+    def slurpResource(str: String) =  {
+      Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
+    }
+    //    val input = slurpResource("examples/pddl/settlers/domain.pddl")
+    //    val input2 = slurpResource("examples/pddl/settlers/pfile0")
+        val input = slurpResource("examples/pddl/woodworking/p03-domain.pddl")
+        val input2 = slurpResource("examples/pddl/woodworking/p03.pddl")
+//    val input = slurpResource("examples/pddl/openstacks/p01-domain.pddl")
+//    val input2 = slurpResource("examples/pddl/openstacks/p01.pddl")
+    val domain = PDDL.parseDomain(input)
+    val problem = PDDL.parseProblem(input2)
+
+
+    try {
+
+      val instance = ProblemInstance.fromPDDL(domain, problem)
+      val init = instance.initialState
+      val plan = Skyplan.findPlan(instance)
+      assert(plan.nonEmpty,plan)
+      println(plan)
+    } catch {
+      case e =>
+        e.printStackTrace()
+        throw e
+    }
   }
-
-
 }
