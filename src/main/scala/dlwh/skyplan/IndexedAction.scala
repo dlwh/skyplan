@@ -9,6 +9,8 @@ case class IndexedAction(name: String,
                          effect: IndexedEffect,
                          duration: Option[ValExpression]) {
 
+  override def hashCode = name.hashCode * 73 + signature.hashCode
+
   def canExecute(state: State, args: IndexedSeq[Int]) = {
     precondition.forall(_.holds(state, state.makeContext(args)))
   }
@@ -17,7 +19,7 @@ case class IndexedAction(name: String,
     duration.map(_.valueWith(state.makeContext(args))).getOrElse(0.0)
   }
 
-0//  override def toString = "IndexedAction(" + name + ", " + signature+")"
+//  override def toString = "IndexedAction(" + name + ", " + signature+")"
   def render = super.toString
 
 }

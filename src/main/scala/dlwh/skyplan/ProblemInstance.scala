@@ -23,16 +23,24 @@ case class State(problem: ProblemInstance,
 
 
   override def hashCode = {
-    (time,axioms).hashCode
+    (time,axioms,resources).hashCode
   }
+
+  override def equals(other: Any) = other match {
+    case other: State => other.time == time && resources == other.resources && axioms.subsetOf(other.axioms) && other.axioms.subsetOf(axioms) && pendingActions == other.pendingActions
+    case x => false
+  }
+
 
   def allPossibleGrounded(action: IndexedAction):IndexedSeq[IndexedSeq[Int]] = {
     val argLists = problem.allViableArgumentListsForAction(action)
     argLists.filter(action.canExecute(this, _))
   }
 
-  def relevantActions = {
-    val r = problem.techTree.relevantActions(this, problem.goal).filter { case grounding => grounding.t.canExecute(this, grounding.args)}
+  def relevantActions: Set[Grounded[IndexedAction]] = relevantActions(problem.goal)
+
+  def relevantActions(goal: IndexedCondition=problem.goal): Set[Grounded[IndexedAction]] = {
+    val r = problem.techTree.relevantActions(this, goal).filter { case grounding => grounding.t.canExecute(this, grounding.args)}
 //    println("relevant" + problem.techTree.relevantActions(this, problem.goal))
 //    println("relevant and doable" + r)
 //    println("possible" + problem.allViableGroundedActions.filter(grounding => grounding.t.canExecute(this, grounding.args)))

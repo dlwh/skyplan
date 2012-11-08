@@ -32,9 +32,9 @@ class HierarchicalAStarSearch[T, Action](treeSearch: Boolean = false) {
 
     implicit val ordState: Ordering[State] = Ordering[Double].on(-_.estimate)
 
-    val dependencies = new mutable.HashMap[T, ArrayBuffer[State]]() {
+    val dependencies = Array.fill(numLevels)(new mutable.HashMap[T, ArrayBuffer[State]]() {
       override def apply(key: T) = getOrElseUpdate(key, new ArrayBuffer[State]())
-    }
+    })
     val heuristics: Array[mutable.Map[T, Double]] = Array.fill(numLevels)(mutable.Map[T, Double]())
 
     val queue = new mutable.PriorityQueue[State]()
@@ -47,48 +47,62 @@ class HierarchicalAStarSearch[T, Action](treeSearch: Boolean = false) {
         val projected = proj(level)(state.t)
         heuristics(level+1).get(projected) match {
           case Some(h) => queue += state.copy(heur=h)
-          case None => dependencies(projected) += state
+          case None =>
+            dependencies(level+1)(projected) += state
+            enqueue(State(level+1, state.t, cost))
         }
       }
     }
 
     val visited = Array.fill(numLevels)(mutable.HashSet[T]())
+    def fillOutHValues(cur: State, cost: Double) {
+      for(ss <- cur.states) {
+        heuristics(ss.level).getOrElseUpdate(ss.t, cost - ss.cost)
+        for(deps <- dependencies(ss.level).get(ss.t))  {
+          for(d <- deps) {
+            queue += d.copy(heur=cost - ss.cost)
+          }
+          dependencies(ss.level) -= ss.t
+        }
+      }
+
+    }
 
     var init: T = instances(0).init
     for(i <- 0 until proj.length) {
       val newInit = proj(i)(init)
-      dependencies(newInit) += State(i, init, 0, None, Double.NaN)
+      dependencies(i+1)(newInit) += State(i, init, 0, None, Double.NaN)
       init = newInit
     }
     queue += State(proj.length, init, 0, None, 0)
     while(queue.nonEmpty) {
       val cur: State = queue.dequeue()
       val t = cur.t
-
       if(instances(cur.level).isGoal(t)) {
-        if(cur.level == 0)
-          return Some(cur.toPath.reverse -> cur.cost)
         val cost = cur.cost
-        for(ss <- cur.states) {
-          heuristics(ss.level).getOrElseUpdate(ss.t, cost - ss.cost)
-          for(deps <- dependencies.get(ss.t))  {
-            for(d <- deps) {
-              queue += d.copy(heur=cost - ss.cost)
-            }
-            dependencies -= ss.t
-          }
-        }
-      }
-      if(!treeSearch)
-        visited(cur.level) += t
+        if(cur.level == 0)
+          return Some(cur.toPath.reverse -> cost)
+        fillOutHValues(cur, cost)
 
-      for( (s,a,c) <- cur.next) {
-        if(treeSearch || !visited(cur.level)(s))
-          enqueue(State(cur.level, s, c + cur.cost, Some(a, cur)))
+      } else if(cur.level != 0 && heuristics(cur.level).contains(cur.t)) {
+        fillOutHValues(cur, cur.cost + heuristics(cur.level)(cur.t))
+      } else {
+        if(!treeSearch)
+          visited(cur.level) += t
+
+        for( (s,a,c) <- cur.next) {
+          if(treeSearch || !visited(cur.level)(s))
+            enqueue(State(cur.level, s, c + cur.cost, Some(a, cur)))
+        }
       }
 
     }
+
+
     None
+
+
   }
+
 
 }
