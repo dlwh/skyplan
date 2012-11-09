@@ -1,16 +1,15 @@
 package dlwh.skyplan
 
-import dlwh.search.{HierarchicalAStarSearch, SearchProblem, AStarSearch}
-import collection.immutable.BitSet
-import dlwh.skyplan.Expression.Global
+import dlwh.search.{HierarchicalSkylineSearch, SearchProblem}
 import io.Source
 
 /**
  * 
  * @author dlwh
  */
-object HierarchicalAStarPlanner {
+object HierarchicalSkyplan {
   def findPlan(inst: ProblemInstance) = {
+    implicit val ordering = Skyplan.makeOrdering(inst)
     def succ(s: State, cost: Double, goal: IndexedCondition): IndexedSeq[(State, Option[Grounded[IndexedAction]], Double)] = {
       val do_actions = s.relevantActions(goal).map { case grounding =>
         val a = grounding.t
@@ -29,7 +28,7 @@ object HierarchicalAStarPlanner {
       SearchProblem(inst.initialState, {succ(_:State, _: Double, inst.goal)}, {(s: State) => inst.goal.holds(s, s.makeContext())})
     }
 
-    val search = new HierarchicalAStarSearch[State, Option[Grounded[IndexedAction]]]
+    val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]]
     search.search(projected, IndexedSeq.fill(projected.length - 1)(identity))
   }
 
@@ -57,7 +56,7 @@ object HierarchicalAStarPlanner {
 
       val instance = ProblemInstance.fromPDDL(domain, problem)
       val init = instance.initialState
-      val plan = HierarchicalAStarPlanner.findPlan(instance)
+      val plan = HierarchicalSkyplan.findPlan(instance)
       assert(plan.nonEmpty,plan)
       println(plan)
     } catch {

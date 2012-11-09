@@ -95,6 +95,7 @@ case object CrazyAxiom extends AxiomOrdering {
 }
 
 case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffects: Boolean = true) {
+
   val (resourceOrders, axiomOrders) = inferOrderings
   val timeOrder = resourceOrders(problem.valFuns.ground(problem.totalTimeIndex, IndexedSeq()))
   val (goodAxioms, badAxioms, crazyAxioms) = {
@@ -219,6 +220,11 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
   }
 
   def isDominatedBy(first: State, second: State): Boolean = {
+    val cmp = compareStates(first, second, shortCircuitOnDominates = true)
+    cmp == IsDominated
+  }
+
+  def isEqualToOrDominatedBy(first: State, second: State): Boolean = {
     val cmp = compareStates(first, second, shortCircuitOnDominates = true)
     cmp == IsDominated || cmp == Equals
   }
