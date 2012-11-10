@@ -55,7 +55,6 @@ object HierarchicalSkyplan {
     try {
 
       val instance = ProblemInstance.fromPDDL(domain, problem)
-      val init = instance.initialState
       val plan = HierarchicalSkyplan.findPlan(instance)
       assert(plan.nonEmpty,plan)
       println(plan)
