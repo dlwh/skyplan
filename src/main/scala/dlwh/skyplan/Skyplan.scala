@@ -1,6 +1,6 @@
 package dlwh.skyplan
 
-import dlwh.search.{SearchProblem, SkylineSearch, AStarSearch}
+import dlwh.search.{NaiveSkyline, SearchProblem, SkylineSearch, AStarSearch}
 import io.Source
 import collection.immutable.IndexedSeq
 import java.util
@@ -28,7 +28,8 @@ object Skyplan {
        else do_actions
      }
 
-     new SkylineSearch[State, Option[Grounded[IndexedAction]]].search(SearchProblem(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, heuristic = h _))
+    val search = new SkylineSearch[State, Option[Grounded[IndexedAction]]](NaiveSkyline.oracle)
+    search.search(SearchProblem(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, heuristic = h _))
    }
 
 

@@ -6,7 +6,7 @@ import collection.mutable
  * 
  * @author dlwh
  */
-class HierarchicalSkylineSearch[T:PartialOrdering, Action](treeSearch: Boolean = false) {
+class HierarchicalSkylineSearch[T, Action](oracleFactory: Oracle.Factory[T], treeSearch: Boolean = false) {
   def search(instances: IndexedSeq[SearchProblem[T, Action]], proj: IndexedSeq[T=>T]):Option[(Path[T, Action], Double)] = {
     val numLevels = instances.length
     require(numLevels > 0)
@@ -32,16 +32,7 @@ class HierarchicalSkylineSearch[T:PartialOrdering, Action](treeSearch: Boolean =
 
     val heuristics: Array[mutable.Map[T, Double]] = Array.fill(numLevels)(mutable.Map[T, Double]())
 
-    val o = implicitly[PartialOrdering[T]]
-
-    implicit val po = new PartialOrdering[State] {
-      def tryCompare(x: State, y: State): Option[Int] = {
-        o.tryCompare(x.t,y.t)
-      }
-
-      def lteq(x: State, y: State): Boolean = o.lteq(x.t,y.t)
-    }
-    val skyline = new Skyline[State](_.cost.toInt)(po)
+    val skyline = oracleFactory.make
 
     var popped = 0
     object Searcher {
@@ -90,7 +81,7 @@ class HierarchicalSkylineSearch[T:PartialOrdering, Action](treeSearch: Boolean =
           heuristics(level+1).get(projected) match {
             case Some(h) =>
               val newState = state.copy(heur=h)
-              if(skyline.tryAdd(newState)) {
+              if(skyline.accepts(newState.t, newState.cost)) {
                 queue += newState
                 numAdded += 1
               }

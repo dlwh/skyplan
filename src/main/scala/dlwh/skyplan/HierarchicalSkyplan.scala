@@ -1,6 +1,6 @@
 package dlwh.skyplan
 
-import dlwh.search.{HierarchicalSkylineSearch, SearchProblem}
+import dlwh.search.{StateSkyline, NaiveSkyline, HierarchicalSkylineSearch, SearchProblem}
 import io.Source
 
 /**
@@ -28,7 +28,7 @@ object HierarchicalSkyplan {
       SearchProblem(inst.initialState, {succ(_:State, _: Double, inst.goal)}, {(s: State) => inst.goal.holds(s, s.makeContext())})
     }
 
-    val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]]
+    val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]](StateSkyline.factory(inst))
     search.search(projected, IndexedSeq.fill(projected.length - 1)(identity))
   }
 
