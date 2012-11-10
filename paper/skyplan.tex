@@ -8,8 +8,12 @@
 \usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
 \usepackage{amsthm}
-\theoremstyle{plain} \newtheorem{theorem}{Theorem} \newtheorem{proposition}{Proposition} \newtheorem{lemma}{Lemma} \newtheorem*{corollary}{Corollary}
+
+\theoremstyle{plain} \newtheorem{theorem}{Theorem} \newtheorem{proposition}{Proposition} \newtheorem{lemma}{Lemma}
+\newtheorem*{corollary}{Corollary}  \newtheorem{claim}{Claim} 
 
 \theoremstyle{definition} \newtheorem{definition}{Definition} \newtheorem{conjecture}{Conjecture} \newtheorem*{example}{Example} 
 
@@ -18,15 +22,15 @@
 
 \frenchspacing
 \pdfinfo{
-/Title (Formatting Instructions for Authors Using LaTeX)
+/Title (Faster Optimal Planning with Partial-Order Pruning)
 /Subject (AAAI Publications)
-/Author (AAAI Press)}
+/Author (Redacted)}
 \setcounter{secnumdepth}{0}  
  \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
 %
-\title{Optimal Planning using Pareto Optimality}
+\title{Faster Optimal Planning with Partial-Order Pruning}
 %%\author{AAAI Press\\
 %Association for the Advancement of Artificial Intelligence\\
 %2275 East Bayshore Road, Suite 160\\
@@ -36,46 +40,55 @@
 \maketitle
 \begin{abstract}
 \begin{quote}
-  Planning problems differ from more typical search problems in a
-  number of ways.  One important difference is that many states are
-  very similar to one another, but not necessarily in a way that
-  is easily expressed using a standard heuristic function.  We
-  describe a new optimal search algorithm for planning that leverages
-  a partial order relation between states. Under suitable conditions,
-  states that are dominated by another with respect to this order
-  can be pruned while provably maintaining optimality.  Moreover,
-  using our algorithm, we show how to incorporate plans found by
-  non-optimal heuristic planners while still maintaining optimality.
-  We describe how to automatically discover these compatible partial
-  orders in serial and concurrent domains.  In our experiments we
-  find that more than 99\% of search nodes can be pruned in some
-  domains.
+  When planning problems have many kinds of resources or high
+  concurrency, each optimal state has exponentially many minor
+  variants, some of which are "better" than others. Standard methods
+  like A* cannot effectively exploit these minor relative differences,
+  and therefore must explore many redundant, clearly suboptimal
+  plans. We describe a new optimal search algorithm for planning
+  that leverages a partial order relation between states. Under
+  suitable conditions, states that are dominated by another with
+  respect to this order can be pruned while provably maintaining
+  optimality. We also describe a simple method for automatically
+  discovering compatible partial orders in both serial and concurrent
+  domains. In our experiments we find that more than 99\% of search
+  states can be pruned in some domains.
 \end{quote}
 \end{abstract}
 
 \section{Introduction}
 
-Compared to other search problems commonly considered in artificial
-intelligence, planning is characterized by states that are ``similar''
-along one or more dimensions.  For instance, in a job shop domain,
-one search state might have more widgets---but fewer sprockets---than
-another. On the other hand, there might be another state that has
-more widgets and sprockets than both states in a shorter amount of
-time. Assuming that more is always better, we can safely discard
-these two \textit{dominated} states, instead focusing our search
-on the better state.
+Planning problems differ from other search problems in a number of
+ways. One important distinction is that there are typically many
+planning states that are ``similar'' along one or more dimensions.
+For instance, in a job shop scheduling domain, one search state
+might have the same number of widgets---but fewer sprockets---than
+another. Assuming that more is always better and that the two states
+can be reached in the same time, we can safely discard the former,
+\textit{dominated} states, instead focusing our search on the better
+state.
 
 In this paper, we seek to formalize this notion, using Pareto
 dominance to prune states that are strictly dominated by some other
-states. More specifically, we give conditions under which we need
-only consider those states that are not dominated by any another
-state, also known as the \textit{skyline}. Our system, Skyplan, is
-a refinement of A$^*$ that expands only those states that are on
-the skyline. (XXX first and second sentence of this para are kinda
-redundant.)
+states. More specifically, we give conditions under which we can
+expand only those states in the \textit{skyline}, that is, states
+that are not dominated by any another state. Our system, Skyplan,
+is a refinement of Uniform Cost Search or A$^*$ that expands only
+those states that are on the skyline.
 
-XXX somewhere in here, we need to say why we can't put this in the heuristic.
+The central idea underlying our approach is to define a partial
+order relationship between states in the search space. This partial
+order has an intuitive interpretation: one state dominates another
+if it has no fewer ``good'' resources (e.g. jobshop outputs) than
+another, no more ``bad'' resources (e.g. labor expended or time
+taken), and it is better in one or more ways. 
 
+In addition to proving the correctness of our approach, we also show 
+how to automatically infer such a partial order from a problem
+specification such as PDDL. (XXX cite?)  XXX
+
+
+XXX if we do this:
 Moreover, we describe how to incorporate non-optimal, heuristic
 plans into Skyplan by not expanding states.  We believe this is the
 first search procedure that can safely use information from non-optimal
@@ -83,9 +96,14 @@ search algorithms for optimal search. Moreover, we describe how to
 convert a combination of a heuristic planner with Skyplan to produce
 an anytime search algorithm, similar to that proposed in XXX.
 
-In our experiments, we compare Skyplan to a similar implementation of $A^*$
-in domains based on real time strategy games. Furthermore, we compare
-our algorithm to an heuristic open source planner. XXX
+In our experiments, we compare Skyplan to a similar implementation
+of $A^*$ on several (XXX) job shop domains. In addition, we introduce
+two new domains, based on the popular video game StarCraft. (XXX
+we should credit evo chamber for one of them.) Skyplan performs
+especially well in these scenarios, cutting the branching factor
+by as much as 99\% compared to A$^*$.  Furthermore, we compare our
+algorithm to a heuristic open source planner specifically engineered
+to one of the StarCraft domains.
 
 \section{Skyplan}
 
@@ -93,39 +111,41 @@ our algorithm to an heuristic open source planner. XXX
   \caption{Pareto Optimality figure}
 \end{figure}
 
-We operate in the standard convention of planning as search within a weighted directed graph. Let
-A planning problem consists of a directed graph $G$ with nodes $n$ consisting of planning states,
-states are linked by directed edges $a$ corresponding to actions within plan space. We associate
-a cost function $\mathrm{cost}(n_s,a,n_t) \in \mathbb R^+$ for taking action $a$ in state $n_s$ yielding a result $n_t$.
-XXX There is also a privileged initial state $n_i$, along with a set of goal states $F$. 
-Further define $g(n)$ to be the minimum cost path from $n_i$ to any node $n$. Our
-goal is to find a path from $n_i$ to some state $n_g \in F$ with the lowest g cost..
+We operate in the standard convention of planning as search within
+a weighted directed graph.  A planning problem consists of a directed
+graph $G$ with states $n$ consisting of planning states.  States are
+linked by directed edges with an associated a cost function
+$\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.  There is also a privileged
+initial state $s$, along with a set of goal states $F$.  Further
+define $g(n)$ to be the minimum cost path from $s$ to any state $n$.
+Our goal is to find a path from $s$ to some state $n_g \in F$ with
+the lowest g cost.
 
 
 \subsection{Partial Orders}
 
-
-
-We will further assume that our graph is endowed with a partial order $\prec$
-that relates nodes $n$ to one another, with the intuitive semantics that
-$n \prec m$ if $n$ is no better than $m$ in any way. For example, in
+We will further assume that our graph is endowed with a partial order $\preceq$
+that relates states $n$ to one another, with the intuitive semantics that
+$n \preceq m$ if $n$ is no better than $m$ in any way. For example, in
 our sprockets and widgets example, $n \prec m$ if $n$ has no more widgets and
-no more sprockets than $m$ and if $g(n) \ge g(m)$. 
+no more sprockets than $m$ and if $g(n) \ge g(m)$. Strict dominance
+holds if $m$ is in addition strictly better than $n$ in some way.
 
 Our goal is to define an optimal search algorithm that can exploit
-this partial order to reduce the search space significantly by only
-expanding nodes $n$ that are \textit{weakly Pareto optimal}, that
-is nodes $n$ with $n \nprec n'$ for all nodes $n'$. For any set of
-nodes $N$, we define the \textit{skyline} of that set as
+this partial order to reduce the search space by only expanding
+states $n$ that are \textit{weakly Pareto optimal}, that is states
+$n$ with $n \nprec n'$ for all states $n'$. For any set of states
+$N$, we define the \textit{skyline} of that set as
 $\textrm{skyline}(N)=\{n: \ne n' \in N: n \prec n'\}$. That is, the
-skyline of a set is those nodes which are weakly Pareto optimal.
-In subsequent sections, we will give a useful sufficient condition under
-which we can exploit a partial order while preserving correctness of optimal graph
-search algorithms.
+skyline of a set is those states which are weakly Pareto optimal.
+In subsequent sections, we will give a useful sufficient condition
+under which we can exploit a partial order while preserving correctness
+of optimal graph search algorithms.
 
 We are not the first to suggest the use of Pareto optimality or skyline queries
 in the context of planning. XXX By contrast, we are the first to define conditions
 under which we can \textit{prune} search states while still maintaining optimality.
+XXX some people looked at pruning\dots
 
 
 \subsection{Algorithm}
@@ -136,32 +156,29 @@ Search, though A$^*$ or any optimal graph search algorithm can
 be modified in the same way.
 
 Skyplan is defined in Algorithm \ref{alg:skyplan}. Essentially, we run Uniform Cost Search as normal, except that 
-we only expand nodes that are not strictly dominated by another
-node we've either expanded or enqueued for expansion.
+we only expand states that are not strictly dominated by another
+state we've either expanded or enqueued for expansion. That is, we only expand nodes that are in the \textit{skyline}
+of the nodes explored so far.
 
 \begin{algorithm}
-\begin{enumerate}
-\item Initialize: $Open=\{\langle s,0\rangle\}$, $Closed=\{\}$,
-$Pruned=\{\}$
-\item Pop the min-cost path $\mathbf{n}\in Open$, $\mathbf{n}\rightarrow Closed$
-
-\begin{enumerate}
-\item If $n\in T$: return $\langle n,prev(n),\hat{h}(s,n)\rangle$
-\end{enumerate}
-\item $\forall n\prime\in\Gamma(n)$, let $\mathbf{n\prime}=\langle n\prime,n,\hat{h}(s,n)+cost(n,n\prime)\rangle$:
-
-\begin{enumerate}
-\item If $\exists\mathbf{m}\in Open\cup Closed\,:\,\mathbf{m}\succeq\mathbf{n\prime}$:
-$\mathbf{n\prime}\rightarrow Pruned$
-\item Else: 
-
-\begin{enumerate}
-\item Let $Prunable(\mathbf{n\prime})=\{\mathbf{m}\in Open\,:\,\mathbf{n\prime}\succeq\mathbf{m}\}$
-\item $Open=Open-Prunable(\mathbf{n\prime})$
-\item $\mathbf{n\prime}\rightarrow Open$ 
-\end{enumerate}
-\end{enumerate}
-\end{enumerate}
+  \begin{algorithmic}[1]
+    \Procedure{Skyplan}{XXX}
+    \State Initialize $Open=\{\langle s,0\rangle\}$, $Closed=\{\}$, $Pruned=\{\}$
+    \While{ $Open$ is not empty}
+    \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in Open$
+      \State $n\rightarrow Closed$
+      \If {$n\in F$} 
+        \State \Return the path to $n$ following back pointers
+      \EndIf
+      \For {$n^\prime\in\mathrm{succ}(n)$} 
+      \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
+        \If {$\forall m \in Open \cup Closed. n^\prime \nprec m$}
+        \State $\mathbf{n^\prime} \rightarrow Open$
+        \EndIf
+      \EndFor
+    \EndWhile
+  \EndProcedure
+  \end{algorithmic}
 \caption{Skyplan}
 \label{alg:skyplan}
 \end{algorithm}
@@ -171,59 +188,73 @@ $\mathbf{n\prime}\rightarrow Pruned$
   \caption{Compatible partial orders. Partial orders stay ahead.}
 \end{figure}
 
-Not just any partial order on nodes can be used to preserve optimality. As a perverse
-example, we can define a partial order under which all nodes on the optimal path
-are dominated by non-optimal nodes. Thus, we need to define a property
+Not just any partial order on states can be used to preserve optimality. As a perverse
+example, we can define a partial order under which all states on the optimal path
+are dominated by non-optimal states. Thus, we need to define a property
 under which a partial order is \textit{compatible} with a search graph. While
 a broad class of partial orders might work, we have identified a particular 
 property that is especially applicable to planning problems:
 
 \begin{definition}[Compatibility]
-  A partial order $\prec$ is \textit{compatible} if for all nodes $n \preceq m$,
+  A partial order $\prec$ is \textit{compatible} if for all states $n \preceq m$,
   \begin{enumerate}
     \item $g(n) \ge g(m)$ and 
     \item $\forall n' \in \mathrm{succ(n)}$ $\exists m' \in \mathrm{succ}(m')$ such that $n' \preceq m'$.
+    \item If $n \in F$, then $m \in F$.
   \end{enumerate}
 \end{definition}
-This recursive definition of compatibility essentially means that if a node $n$
-is dominated by a node $m$, then it must be the case that $n$ is no cheaper than $m$
-and that $m$'s successors ``stay ahead'' of $n$'s. It is worth mentioning that
+This recursive definition of compatibility essentially means that if a state $n$
+is dominated by a state $m$, then it must be the case that $n$ is no cheaper than $m$
+and that $m$'s successors ``stay ahead'' of $n$'s. Finally, $F$ must be closed with respect to $\succeq$: every state that
+dominates a goal state must also be a goal. It is worth mentioning that
 there is always a compatible partial ordering: the trivial order with $n \npreceq m$ for all
-nodes $n$ and $m$.
+states $n$ and $m$.
 
 In planning problems, defining a compatible partial order is usually quite easy. For
 resources where ``more is better''. In the sequel, we discuss a standard structure
 for these partial orders, as well as how to automatically infer a partial order
 from the specification of a planning problem.
 
-
-
-
-The task is to find the shortest path from $s$ to a goal node in
-$T$. We use Uniform Cost Search with the addition of pruning. Three
-sets $Open$, $Closed$, $Pruned$ (not used in algorithm, just proof)
-whose elements are triples $\mathbf{n=}\langle n,\, prev(n),\,\hat{h}(s,n)\rangle$
-where $\hat{h}(s,n)$ is our current best guess for the minimum cost
-from $s$ to $n$. By following the prev pointers (through Open and
-Closed), we can reconstruct a path from $s$ to $n$. Thus, we can
-think of these triples as paths themselves. By the operation $\langle n,prev(n),\hat{h}(s,n)\rangle\rightarrow Open$,
-(resp. Closed and Pruned), we mean that we replace/update any element
-of $\langle n,*,*\rangle\in Open$ with $\langle n,prev(n),\hat{h}(s,n)\rangle$,
-adding it if no such element exists.
-
 \subsection{Analysis}
 
-\textbf{Theorem:} If $\succeq$ is a compatible partial order, S{*}
-is \emph{complete }and \emph{optimal}.
+XXX
 
-\textbf{Proof:} Can we appeal to the fact that we are essentially
-modifying UCS? In that case, we must simply show that we never prune
-an optimal path to the goal (or, more accurately, there is an optimal
-path to the goal which we do not prune).
+\begin{claim}{}\label{clm-complete}
+   If $\preceq$ is a compatible partial order, Skyplan
+is \emph{complete}.
+\end{claim}
+\begin{proof} Suppose otherwise, then all paths to all goals must
+have been pruned. Consider one such path $p$ and let $n$ be the
+state in $p$ that was pruned, and let $p_{n:}$ be the suffix of the
+path starting from $n$. Let $m$ be a state with $m \succ n$ that was
+not pruned.  By transitivity of $\preceq$, such a state must exist.
+Then, from condition and (2) and (3) of compatibility, a simple
+inductive argument shows that there must be an analogous path 
+$p^\prime_{m:}$ ending in a goal state.
 
-\textbf{Theorem:} S{*} is \emph{optimally efficient}.
+  XXX We should say something ensuring that no states in $p^\prime$ are pruned.
+\end{proof}
+  
+\begin{claim}{}\label{clm-optimal}
+   If $\preceq$ is a compatible partial order, Skyplan
+is \emph{optimal}.
+\end{claim}
+\begin{proof} Suppose otherwise, then consider an optimal path $p^*$ with final state $f^*$
+  must have been pruned. Let $n$ be the state along $p^*$ that
+  was pruned, and let $m$ be a non-pruned state with $m \succ n$.
+  Then, again from condition (2) and (3), there must be an analogous path
+  starting from $m$ and running to a final state $f^\prime$. Moreover, by condition (1)
+  we have that the total cost of this path $g(f^\prime) \le g(f^*)$, a contradiction.
 
-\textbf{Proof:} I haven't even thought about if this is true or not.
+  XXX We should say something ensuring that no states in $p^\prime$ are pruned.
+\end{proof}
+
+
+
+\begin{claim}{}\label{clm-complete}
+For any compatible partial order $\prec$, Skyplan is \emph{optimally efficient}.
+\end{claim}
+\begin{proof} XXX \end{proof}
 
 \section{Inferring Partial Orders}
 
@@ -233,9 +264,9 @@ path to the goal which we do not prune).
 
 \subsection{The StarCraft Domain}
 \begin{figure}
-  \caption{Nodes pruned table?}
+  \caption{states pruned table?}
 \end{figure}
-\subsection{The Settlers Domain}
+\subsection{The Woodworking Domain}
 \subsection{The StarCraft 2 Domain}
 \begin{figure}
   \caption{Plan length over time? Anytime plan length over time?}
