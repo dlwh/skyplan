@@ -306,46 +306,70 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
       i += 1
     }
 
+    i = 0
+    while(i < first.pendingActions.data.iterableSize) {
+      if(first.pendingActions.data.isActive(i)) {
+        val action = first.pendingActions.data.indexAt(i)
+          visited += action
+          cmp = checkActionForDominance(first, action, second, cmp)
+          if (cmp == NonComparable) return cmp
+          if (shortCircuitOnDominates && cmp == Dominates) return cmp
 
-
-    for (action : Int <- (first.pendingActions.data.activeKeysIterator ++
-      second.pendingActions.data.activeKeysIterator).toSet) {
-      val q1 = if (first.pendingActions.data.contains(action)) first.pendingActions.data(action).clone()
-               else mutable.Queue.empty[Double]
-      val q2 = if (second.pendingActions.data.contains(action)) second.pendingActions.data(action).clone()
-               else mutable.Queue.empty[Double]
-      var actionCmp : PartialOrder = Equals
-      var counter = 0
-      while (!(q1.isEmpty || q2.isEmpty)) {
-        val next1 = q1.head
-        val next2 = q2.head
-        if (next1 == next2) {
-          q1.dequeue()
-          q2.dequeue()
-        } else if (next1 < next2) {
-          counter -= 1
-          if (counter < 0) actionCmp = actionCmp combine Dominates
-          q1.dequeue()
-        } else { // next1 > next2
-          counter += 1
-          if (counter > 0) actionCmp = actionCmp combine IsDominated
-          q2.dequeue()
+      }
+      i += 1
+    }
+    i = 0
+    while(i < second.pendingActions.data.iterableSize) {
+      if(second.pendingActions.data.isActive(i)) {
+        val action = second.pendingActions.data.indexAt(i)
+        if(!visited(action)) {
+          cmp = checkActionForDominance(first, action, second, cmp)
+          if (cmp == NonComparable) return cmp
+          if (shortCircuitOnDominates && cmp == Dominates) return cmp
         }
       }
-      if (!q1.isEmpty) {
-        counter -= 1
-        if (counter < 0) actionCmp = actionCmp combine Dominates
-      }
-      if (!q2.isEmpty) {
-        counter += 1
-        if (counter > 0) actionCmp = actionCmp combine IsDominated
-      }
-      actionCmp = adjustForActionEffects(action, actionCmp)
-      cmp = cmp combine actionCmp
-      if (cmp == NonComparable) return cmp
-      if (shortCircuitOnDominates && cmp == Dominates) return cmp
+      i += 1
     }
 
+
+    cmp
+  }
+
+  private def checkActionForDominance(first: State, action: Int, second: State, _cmp: PartialOrder): PartialOrder = {
+    var cmp: PartialOrder = _cmp
+    val q1 = if (first.pendingActions.data.contains(action)) first.pendingActions.data(action).clone()
+    else mutable.Queue.empty[Double]
+    val q2 = if (second.pendingActions.data.contains(action)) second.pendingActions.data(action).clone()
+    else mutable.Queue.empty[Double]
+    var actionCmp: PartialOrder = Equals
+    var counter = 0
+    while (!(q1.isEmpty || q2.isEmpty)) {
+      val next1 = q1.head
+      val next2 = q2.head
+      if (next1 == next2) {
+        q1.dequeue()
+        q2.dequeue()
+      } else if (next1 < next2) {
+        counter -= 1
+        if (counter < 0) actionCmp = actionCmp combine Dominates
+        q1.dequeue()
+      } else {
+        // next1 > next2
+        counter += 1
+        if (counter > 0) actionCmp = actionCmp combine IsDominated
+        q2.dequeue()
+      }
+    }
+    if (!q1.isEmpty) {
+      counter -= 1
+      if (counter < 0) actionCmp = actionCmp combine Dominates
+    }
+    if (!q2.isEmpty) {
+      counter += 1
+      if (counter > 0) actionCmp = actionCmp combine IsDominated
+    }
+    actionCmp = adjustForActionEffects(action, actionCmp)
+    cmp = cmp combine actionCmp
     cmp
   }
 }
