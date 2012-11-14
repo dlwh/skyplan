@@ -19,6 +19,7 @@
 
 \theoremstyle{remark} \newtheorem*{remark}{Remark} \newtheorem*{note}{Note} \newtheorem{case}{Case}
 
+\newcommand{\R}{\mathbb{R}}
 
 \frenchspacing
 \pdfinfo{
@@ -36,6 +37,7 @@
 %2275 East Bayshore Road, Suite 160\\
 %Palo Alto, California 94303\\
 %}
+\author{}
 
 \maketitle
 \begin{abstract}
@@ -196,6 +198,7 @@ a broad class of partial orders might work, we have identified a particular
 property that is especially applicable to planning problems:
 
 \begin{definition}[Compatibility]
+	\label{def-compatibility}
   A partial order $\prec$ is \textit{compatible} if for all states $n \preceq m$,
   \begin{enumerate}
     \item $g(n) \ge g(m)$ and 
@@ -251,12 +254,93 @@ is \emph{optimal}.
 
 
 
-\begin{claim}{}\label{clm-complete}
+\begin{claim}{}\label{clm-optimally-efficient}
 For any compatible partial order $\prec$, Skyplan is \emph{optimally efficient}.
 \end{claim}
 \begin{proof} XXX \end{proof}
 
 \section{Inferring Partial Orders}
+
+\newcommand{\po}{\preceq_R}
+
+In this section, we show how to automatically infer a compatible partial order from a
+planning problem definition. First, we'll describe a partial order for the simpler case of
+domains without concurrency, and then we'll show how to extend the partial order algorithm
+to accommodate the augmented state representation that is necessary to support concurrency.
+
+When planning with resources, a planning state $n$ can be viewed as a mapping from resource
+types to values. That is, for a given resource $r$, $n(r) \in \R$ is the quantity of that
+resource available at state $n$.\footnote{Many planning state representations also require
+some notion of boolean predicates, but in order to simplify the exposition, for the
+purposes of defining a partial order we view these as special resources that always take
+values in \{0, 1\}.}
+
+If we want to determine whether a state $\mathbf{n}$ dominates $\mathbf{m}$, then we need
+to know two things: first, does $\mathbf{n}$ have lower cost, and second, does $\mathbf{n}$
+have a more ``useful'' set of resources? The first criterion is easy to check, but the
+second requires some notion of what it means for resources to be useful or not.
+
+There are basically two ways in which the value of a particular resource can matter: it can
+either contribute to satisfying the goal test $n \in F$, or it can contribute to satisfying
+the precondition of some action that might get us closer to the goal. In both cases, we're
+concerned with the relationship between the value of a particular resource $r$, and a
+particular boolean predicate $b$. In general, we want to know when it helps to have more (or less) of a particular resource, so we formalize the relationship with the following notions:
+\begin{definition}[$r$-Dependent]
+A predicate $b$ is $r-$\textit{dependent} if $\exists n, n'$ with $b(n) = \text{true}$ and $b(n') = \text{false}$, but where $n$ and $n'$ are identical except that $n(r) \ne n'(r)$.
+\end{definition}
+\begin{definition}[$r$-Positive]
+	A predicate $b$ is $r-$\textit{positive} if $b$ is $r-$dependent and
+	\begin{enumerate}
+		\item $\forall n, n'$ identical except $n(r) < n'(r)$, $b(n) \Rightarrow b(n').$
+		\item $\forall n, n'$ identical except $n(r) > n'(r)$, $\neg b(n) \Rightarrow \neg b(n')$
+	\end{enumerate}
+\end{definition}
+\begin{definition}[$r$-Negative]
+	A predicate $b$ is $r-$\textit{negative} if $b$ is $r-$dependent and
+	\begin{enumerate}
+		\item $\forall n, n'$ identical except $n(r) > n'(r)$, $b(n) \Rightarrow b(n').$
+		\item $\forall n, n'$ identical except $n(r) < n'(r)$, $\neg b(n) \Rightarrow \neg b(n')$
+	\end{enumerate}
+\end{definition}
+For example, the predicate ``$n(r) \ge 1$'' is $r-$positive, the predicate ``$n(r) \le 0$'' is $r-negative$, the predicate ``$n(r_1) \ge n(r_2)$'' is $r_1-$positive, but $r_2-$negative, and the predicate ``$1 \le n(r) \le 2$'' is $r-$dependent, but neither $r-$positive nor $r-$negative.
+
+Using these definitions, we can construct a partial order based on three parts of the problem definition:
+\begin{enumerate}
+	\item The set of resources.\footnote{Many planning domains use first-order value functions and predicates. For these, each possible grounded instantiation is treated as a separate resource.}
+	\item The set of possible actions, particularly their preconditions.\footnote{Again, for first-order actions, all possible groundings are considered separately.}
+	\item The goal test: $n \in F$.
+\end{enumerate}
+
+Let $B$ be the set of all relevant predicates (the preconditions for each action, plus the goal test). Then we partition all the resources into four disjoint sets: $R^+$, $R^-$, $R^=$, and $R^\emptyset$, according to the following criteria:
+\begin{itemize}
+	\item $r \in R^+$ if $\forall b \in B, b$ is $r-$dependent implies that $b$ is $r-$positive, and $\exists$ at least one $b \in B$ that is $r-$positive.
+	\item $r \in R^-$ if $\forall b \in B, b$ is $r-$dependent implies that $b$ is $r-$negative, and $\exists$ at least one $b \in B$ that is $r-$negative.
+	\item $r \in R^=$ if $\exists b \in B$ that is $r-$dependent but not $r-$positive or $r-$negative, \emph{or} if $\exists b_1, b_2 \in B$ with $b_1$ $r-$positive and $b_2$ $r-$negative.
+	\item $r \in R^\emptyset$ if $\forall b \in B, b$ is \emph{not} $r-$dependent.
+\end{itemize}
+
+Finally, we can define the partial order $\po$:
+\begin{definition}[$\po$]
+	\label{def-po}
+	For planning states $\textbf{n} = (n, c)$ and $\textbf{m} = (m, d)$, we say that $\textbf{n} \po \textbf{m}$ if and only if:
+	\begin{enumerate}
+		\item $c \ge d$,
+		\item $\forall r \in R^+, n(r) \le m(r)$,
+		\item $\forall r \in R^-, n(r) \ge m(r)$, and
+		\item $\forall r \in R^=, n(r) = m(r)$
+	\end{enumerate}
+\end{definition}
+
+\begin{claim}{}{\label{clm-po-compatible}}
+	If action costs and effects are deterministic (do not depend on the current state),\footnote{Note that if a domain does have context-dependent actions, and if the mapping from states to costs/effects is discrete, then each non-deterministic action can be replaced with a set of deterministic actions with varying preconditions.} then $\po$ is compatible.
+\end{claim}
+\begin{proof}
+	Condition 1 of Definition~\ref{def-compatibility} follows directly from condition 1 of Definition~\ref{def-po}.
+	
+	To verify condition 3 of Definition~\ref{def-compatibility}, we only need to consider resources $r$ for which the goal test is $r-$dependent (changes in other resources will not affect the outcome of the test). If the goal test is $r-$positive, then $r \in R^+$ or $r \in R^=$, so $n(r) \le m(r)$. If the goal test is $r-$negative, then $r \in R^-$ or $r \in R^=$, so $n(r) \ge m(r)$. If the goal test is neither (but is $r-$dependent), then $r \in R^=$, so $n(r) = m(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
+	
+	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n'$. By the argument above, if the precondition of this action holds for $n$, then it also holds for $m$. Let $m'$ be the result of taking this action from $m$. By assumption, the cost is identical, and also by assumption, the change in resources from $m$ to $m'$ is identical to that from $n$ to $n'$, which implies that $\forall r, m'(r) - n'(r) = m(r) - n(r)$. Therefore, $\textbf{n'} \po \textbf{m'}$.
+\end{proof}
 
 \section{Exploiting Heuristic Planners}
 
