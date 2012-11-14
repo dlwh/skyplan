@@ -132,9 +132,9 @@ holds if $m$ is in addition strictly better than $n$ in some way.
 Our goal is to define an optimal search algorithm that can exploit
 this partial order to reduce the search space by only expanding
 states $n$ that are \textit{weakly Pareto optimal}, that is states
-$n$ with $n \nprec n'$ for all states $n'$. For any set of states
+$n$ with $n \nprec n^\prime$ for all states $n^\prime$. For any set of states
 $N$, we define the \textit{skyline} of that set as
-$\textrm{skyline}(N)=\{n: \ne n' \in N: n \prec n'\}$. That is, the
+$\textrm{skyline}(N)=\{n: \ne n^\prime \in N: n \prec n^\prime\}$. That is, the
 skyline of a set is those states which are weakly Pareto optimal.
 In subsequent sections, we will give a useful sufficient condition
 under which we can exploit a partial order while preserving correctness
@@ -228,9 +228,9 @@ property that is especially applicable to planning problems:
   A partial order $\prec$ is \textit{compatible} if for all states $n \preceq m$,
   \begin{enumerate}
     \item $g(n) \ge g(m)$, and 
-    \item $\forall n' \in \mathrm{succ(n)}$ $\exists m' \in
-      \mathrm{succ}(m')$ such that $n' \preceq m'$ and
-      $cost(n,n') \ge cost(m, m')$, and
+    \item $\forall n^\prime \in \mathrm{succ(n)}$ $\exists m^\prime \in
+      \mathrm{succ}(m^\prime)$ such that $n^\prime \preceq m^\prime$ and
+      $cost(n,n^\prime) \ge cost(m, m^\prime)$, and
     \item If $n \in F$, then $m \in F$
   \end{enumerate}
 \end{definition}
@@ -319,23 +319,23 @@ the precondition of some action that might get us closer to the goal. In both ca
 concerned with the relationship between the value of a particular resource $r$, and a
 particular boolean predicate $b$. In general, we want to know when it helps to have more (or less) of a particular resource, so we formalize the relationship with the following notions:
 \begin{definition}[$r$-Dependent]
-A predicate $b$ is $r-$\textit{dependent} if $\exists n, n'$ with $b(n) = \text{true}$ and $b(n') = \text{false}$, but where $n$ and $n'$ are identical except that $n(r) \ne n'(r)$.
+A predicate $b$ is $r$-\textit{dependent} if $\exists n, n^\prime$ with $b(n) = \text{true}$ and $b(n^\prime) = \text{false}$, but where $n$ and $n^\prime$ are identical except that $n(r) \ne n^\prime(r)$.
 \end{definition}
 \begin{definition}[$r$-Positive]
-	A predicate $b$ is $r-$\textit{positive} if $b$ is $r-$dependent and
+	A predicate $b$ is $r$-\textit{positive} if $b$ is $r$-dependent and
 	\begin{enumerate}
-		\item $\forall n, n'$ identical except $n(r) < n'(r)$, $b(n) \Rightarrow b(n').$
-		\item $\forall n, n'$ identical except $n(r) > n'(r)$, $\neg b(n) \Rightarrow \neg b(n')$
+		\item $\forall n, n^\prime$ identical except $n(r) < n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
+		\item $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $\neg b(n) \Rightarrow \neg b(n^\prime)$
 	\end{enumerate}
 \end{definition}
 \begin{definition}[$r$-Negative]
-	A predicate $b$ is $r-$\textit{negative} if $b$ is $r-$dependent and
+	A predicate $b$ is $r$-\textit{negative} if $b$ is $r$-dependent and
 	\begin{enumerate}
-		\item $\forall n, n'$ identical except $n(r) > n'(r)$, $b(n) \Rightarrow b(n').$
-		\item $\forall n, n'$ identical except $n(r) < n'(r)$, $\neg b(n) \Rightarrow \neg b(n')$
+		\item $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
+		\item $\forall n, n^\prime$ identical except $n(r) < n^\prime(r)$, $\neg b(n) \Rightarrow \neg b(n^\prime)$
 	\end{enumerate}
 \end{definition}
-For example, the predicate ``$n(r) \ge 1$'' is $r-$positive, the predicate ``$n(r) \le 0$'' is $r-negative$, the predicate ``$n(r_1) \ge n(r_2)$'' is $r_1-$positive, but $r_2-$negative, and the predicate ``$1 \le n(r) \le 2$'' is $r-$dependent, but neither $r-$positive nor $r-$negative.
+For example, the predicate ``$n(r) \ge 1$'' is $r$-positive, the predicate ``$n(r) \le 0$'' is \textit{r-negative}, the predicate ``$n(r_1) \ge n(r_2)$'' is $r_1$-positive, but $r_2$-negative, and the predicate ``$1 \le n(r) \le 2$'' is $r$-dependent, but neither $r$-positive nor $r$-negative.
 
 Using these definitions, we can construct a partial order based on three parts of the problem definition:
 \begin{enumerate}
@@ -346,16 +346,16 @@ Using these definitions, we can construct a partial order based on three parts o
 
 Let $B$ be the set of all relevant predicates (the preconditions for each action, plus the goal test). Then we partition all the resources into four disjoint sets: $R^+$, $R^-$, $R^=$, and $R^\emptyset$, according to the following criteria:
 \begin{itemize}
-	\item $r \in R^+$ if $\forall b \in B, b$ is $r-$dependent implies that $b$ is $r-$positive, and $\exists$ at least one $b \in B$ that is $r-$positive.
-	\item $r \in R^-$ if $\forall b \in B, b$ is $r-$dependent implies that $b$ is $r-$negative, and $\exists$ at least one $b \in B$ that is $r-$negative.
-	\item $r \in R^=$ if $\exists b \in B$ that is $r-$dependent but not $r-$positive or $r-$negative, \emph{or} if $\exists b_1, b_2 \in B$ with $b_1$ $r-$positive and $b_2$ $r-$negative.
-	\item $r \in R^\emptyset$ if $\forall b \in B, b$ is \emph{not} $r-$dependent.
+	\item $r \in R^+$ if $\forall b \in B, b$ is $r$-dependent implies that $b$ is $r$-positive, and $\exists$ at least one $b \in B$ that is $r$-positive.
+	\item $r \in R^-$ if $\forall b \in B, b$ is $r$-dependent implies that $b$ is $r$-negative, and $\exists$ at least one $b \in B$ that is $r$-negative.
+	\item $r \in R^=$ if $\exists b \in B$ that is $r$-dependent but not $r$-positive or $r$-negative, \emph{or} if $\exists b_1, b_2 \in B$ with $b_1$ $r$-positive and $b_2$ $r$-negative.
+	\item $r \in R^\emptyset$ if $\forall b \in B, b$ is \emph{not} $r$-dependent.
 \end{itemize}
 
 Finally, we can define the partial order $\po$:
 \begin{definition}[$\po$]
 	\label{def-po}
-	For planning states $\textbf{n} = (n, c)$ and $\textbf{m} = (m, d)$, we say that $\textbf{n} \po \textbf{m}$ if and only if:
+	For planning states $\mathbf{n} = (n, c)$ and $\mathbf{m} = (m, d)$, we say that $\mathbf{n} \po \mathbf{m}$ if and only if:
 	\begin{enumerate}
 		\item $c \ge d$,
 		\item $\forall r \in R^+, n(r) \le m(r)$,
@@ -370,12 +370,73 @@ Finally, we can define the partial order $\po$:
 \begin{proof}
 	Condition 1 of Definition~\ref{def-compatibility} follows directly from condition 1 of Definition~\ref{def-po}.
 	
-	To verify condition 3 of Definition~\ref{def-compatibility}, we only need to consider resources $r$ for which the goal test is $r-$dependent (changes in other resources will not affect the outcome of the test). If the goal test is $r-$positive, then $r \in R^+$ or $r \in R^=$, so $n(r) \le m(r)$. If the goal test is $r-$negative, then $r \in R^-$ or $r \in R^=$, so $n(r) \ge m(r)$. If the goal test is neither (but is $r-$dependent), then $r \in R^=$, so $n(r) = m(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
+	To verify condition 3 of Definition~\ref{def-compatibility}, we only need to consider resources $r$ for which the goal test is $r$-dependent (changes in other resources will not affect the outcome of the test). If the goal test is $r$-positive, then $r \in R^+$ or $r \in R^=$, so $n(r) \le m(r)$. If the goal test is $r$-negative, then $r \in R^-$ or $r \in R^=$, so $n(r) \ge m(r)$. If the goal test is neither (but is $r$-dependent), then $r \in R^=$, so $n(r) = m(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
 	
-	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n'$. By the argument above, if the precondition of this action holds for $n$, then it also holds for $m$. Let $m'$ be the result of taking this action from $m$. By assumption, the cost is identical, and also by assumption, the change in resources from $m$ to $m'$ is identical to that from $n$ to $n'$, which implies that $\forall r, m'(r) - n'(r) = m(r) - n(r)$. Therefore, $\textbf{n'} \po \textbf{m'}$.
+	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n^\prime$. By the argument above, if the precondition of this action holds for $n$, then it also holds for $m$. Let
+  $m^\prime$ be the result of taking this action from $m$. By assumption, the cost is identical, and also by assumption, the change in resources from $m$ to $m^\prime$ is identical to that from $n$ to $n^\prime$, which implies that $\forall r, m^\prime(r) -
+  n^\prime(r) = m(r) - n(r)$. Therefore, $\mathbf{n^\prime} \po \mathbf{m^\prime}$.
 \end{proof}
 
-\section{Exploiting Heuristic Planners}
+\section{Skyplan in Practice}
+There are few  XXX
+
+\subsection{Hierarchical A$^*$}
+
+While skyline pruning works with any optimal search procedure, this
+pruning method has a particular synergy with the Hierarchical
+A$^*$ algorithm~\cite{holte1996hierarchical}. Hierarchical A$^*$ works by identifying a series
+of relaxations to the search space, and uses each level of relaxation
+as the (admissible and consistent) heuristic for the lower level.
+
+One particularly easy way to apply this algorithm to planning is
+to define the relaxations only in terms of relaxations to the goal
+test. That is, one can simply take a subset of the goal conditions
+at each level without any further relaxations of the state space.
+
+If we use this series of projections, we can actually maintain a
+\textit{single} skyline for all levels of the hierarchy so long as
+we use the partial order $\po$ defined on the original search problem
+(that is, with the full goal test). Thus, when expanding a lower
+level state, we can prune any of its successors if they are dominated
+by a state at \textit{any} level of the hierarchy.  In particular,
+the combination of Hierarchical A$^*$ and skyline pruning means
+that the projected searches give us two sources of information: how
+far a state is from a (partial) goal, and which states are not
+possibly on the optimal path to the full goal. likely XXX Experiments
+on this.
+
+\subsection{Implementing Skyline Pruning}
+
+The implementation of skyline pruning is somewhat delicate.  There
+is some work in this area in the database literature, but these are
+not designed for online applications~\cite{skylineoperator,tan01efficient}
+or are for fairly low dimensional states~\cite{KossmannRR02}, and
+so they are not likely to be useful here.
+
+The obvious, na\"ive solution is to maintain a list of all elements
+in the current the skyline, and to check all of these elements when
+deciding whether or not to add an element to the skyline. Unfortunately,
+this is clearly quadratic in the number of states, which in practice
+can overwhelm the benefits from
+
+However, note that in high dimensions most states are clearly not
+related to one another.  They might both have different positive
+propositions, with one not having strictly more than another.
+Therefore, we can quickly do a ``coarse'' version of a skyline query
+by having a list of sets, one for each resource or proposition,
+that contains all states in the skyline that have a positive value
+for that resource if the resource is XXX what kind of positive, and
+vice versa if negative. Then, when deciding whether or not a new
+state is dominated, we can simple intersect these sets, and then
+run the check on those states in the intersection. Because most
+states in practice are dominated by very few (or sometimes no)
+states, this intersection is much smaller than the entire skyline.
+So, while this optimization does not decrease the asymptotic runtime,
+in practice it is several orders of magnitude faster.
+
+
+
+
 
 \section{Experiments}
 
