@@ -157,11 +157,23 @@ By contrast, we seek to \textit{prune} search states while still
 maintaining optimality.
 
 Still others have employed other notions of partial orders while
-maintaining completeness and optimality. These methods largely
-fall into a category known as ``partial order reduction
-techniques,'' from computer aided verification.XXX At a high level,
-these methods XXX. These include expansion cores \cite{chen09completeness, xu11theory}
-
+maintaining completeness and optimality. These methods largely fall
+into a category known as ``partial order reduction techniques,''
+from computer aided verification. These methods fall into two
+categories: those that prune states and those that prune transitions.
+The former class includes expansion cores \cite{chen09completeness,
+xu11theory}, which select only ``relevant'' actions for any given
+state. The latter consists of methods like commutativity
+pruning~\cite{geffner2000admissible}, which prunes redundant
+permutations of partial plans, and stratified
+planning~\cite{chen2009stratified}, which identifies layers of the
+planning problem and only considers actions appropriate to a given
+layer. \citet{wehrle2012partial} recently showed that all of these
+techniques are special cases of more general techniques from computer
+aided verification, namely sleep sets~\cite{godefroid96partial} and
+stubborn sets~\cite{valmari92stubborn}. These methods are largely
+orthogonal to our approach. Indeed we use something not unlike
+expansion cores in our system.
 
 
 \subsection{Algorithm}
