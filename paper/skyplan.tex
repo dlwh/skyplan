@@ -11,6 +11,7 @@
 \usepackage{algorithmicx}
 \usepackage{algpseudocode}
 \usepackage{amsthm}
+\usepackage{natbib}
 
 \theoremstyle{plain} \newtheorem{theorem}{Theorem} \newtheorem{proposition}{Proposition} \newtheorem{lemma}{Lemma}
 \newtheorem*{corollary}{Corollary}  \newtheorem{claim}{Claim} 
@@ -85,18 +86,13 @@ if it has no fewer ``good'' resources (e.g. jobshop outputs) than
 another, no more ``bad'' resources (e.g. labor expended or time
 taken), and it is better in one or more ways. 
 
-In addition to proving the correctness of our approach, we also show 
-how to automatically infer such a partial order from a problem
-specification such as PDDL. (XXX cite?)  XXX
-
-
-XXX if we do this:
-Moreover, we describe how to incorporate non-optimal, heuristic
-plans into Skyplan by not expanding states.  We believe this is the
-first search procedure that can safely use information from non-optimal
-search algorithms for optimal search. Moreover, we describe how to
-convert a combination of a heuristic planner with Skyplan to produce
-an anytime search algorithm, similar to that proposed in XXX.
+In addition to proving the correctness of our approach, we also
+show how to automatically infer such a partial order from a problem
+specification such as PDDL.~\cite{ghallab1998pddl,fox2003pddl2}
+This procedure is fairly intuitive: one simply needs to determine
+which resources or propositions are uniformly good or bad, and---for 
+domains with durative actions---which actions have uniformly
+good or bad final effects.
 
 In our experiments, we compare Skyplan to a similar implementation
 of $A^*$ on several (XXX) job shop domains. In addition, we introduce
@@ -105,7 +101,7 @@ we should credit evo chamber for one of them.) Skyplan performs
 especially well in these scenarios, cutting the branching factor
 by as much as 99\% compared to A$^*$.  Furthermore, we compare our
 algorithm to a heuristic open source planner specifically engineered
-to one of the StarCraft domains.
+to one of the two StarCraft domains.
 
 \section{Skyplan}
 
@@ -144,10 +140,28 @@ In subsequent sections, we will give a useful sufficient condition
 under which we can exploit a partial order while preserving correctness
 of optimal graph search algorithms.
 
-We are not the first to suggest the use of Pareto optimality or skyline queries
-in the context of planning. XXX By contrast, we are the first to define conditions
-under which we can \textit{prune} search states while still maintaining optimality.
-XXX some people looked at pruning\dots
+We are not the first to suggest the use of Pareto optimality or
+skyline queries in the context of planning. For example, the
+non-optimal Metric-FF planner~\cite{hoffmann2003metric} employed a
+more limited notion of dominance, requiring that all propositions
+be the same between two states, the domain to be monotonically
+``good'' in all resources, and for the dominating state to have no
+fewer resources along any axis. Our notion of dominance is more
+general, and we are able to find useful partial orders in more general
+domains.
+
+More recently, in another satsificing planner, \citet{roger2010more}
+combined multiple heuristics by only expanding those states which
+were currently Pareto optimal with respect to the current open set.
+By contrast, we seek to \textit{prune} search states while still
+maintaining optimality.
+
+Still others have employed other notions of partial orders while
+maintaining completeness and optimality. These methods largely
+fall into a category known as ``partial order reduction
+techniques,'' from computer aided verification.XXX At a high level,
+these methods XXX. These include expansion cores \cite{chen09completeness, xu11theory}
+
 
 
 \subsection{Algorithm}
@@ -201,22 +215,29 @@ property that is especially applicable to planning problems:
 	\label{def-compatibility}
   A partial order $\prec$ is \textit{compatible} if for all states $n \preceq m$,
   \begin{enumerate}
-    \item $g(n) \ge g(m)$ and 
-    \item $\forall n' \in \mathrm{succ(n)}$ $\exists m' \in \mathrm{succ}(m')$ such that $n' \preceq m'$.
-    \item If $n \in F$, then $m \in F$.
+    \item $g(n) \ge g(m)$, and 
+    \item $\forall n' \in \mathrm{succ(n)}$ $\exists m' \in
+      \mathrm{succ}(m')$ such that $n' \preceq m'$ and
+      $cost(n,n') \ge cost(m, m')$, and
+    \item If $n \in F$, then $m \in F$
   \end{enumerate}
 \end{definition}
-This recursive definition of compatibility essentially means that if a state $n$
-is dominated by a state $m$, then it must be the case that $n$ is no cheaper than $m$
-and that $m$'s successors ``stay ahead'' of $n$'s. Finally, $F$ must be closed with respect to $\succeq$: every state that
-dominates a goal state must also be a goal. It is worth mentioning that
-there is always a compatible partial ordering: the trivial order with $n \npreceq m$ for all
+This recursive definition of compatibility essentially means that
+if a state $n$ is dominated by a state $m$, then it must be the
+case that $n$ is no cheaper than $m$ and that $m$'s successors
+``stay ahead'' of $n$'s. Finally, $F$ must be closed with respect
+to $\succeq$: every state that dominates a goal state must also be
+a goal. It is worth mentioning that there is always a compatible
+partial ordering: the trivial order with $n \npreceq m$ for all
 states $n$ and $m$.
 
-In planning problems, defining a compatible partial order is usually quite easy. For
-resources where ``more is better''. In the sequel, we discuss a standard structure
-for these partial orders, as well as how to automatically infer a partial order
-from the specification of a planning problem.
+In planning problems, defining a compatible partial order is usually
+quite easy, so long as cost functions are additive.  Actions are
+often defined in terms of partial states with constant costs (e.g.\
+time elapsed), and so compatibility is easily checked.  In the
+sequel, we discuss a standard structure for these partial orders,
+as well as how to automatically infer a partial order from the
+specification of a planning problem.
 
 \subsection{Analysis}
 
@@ -360,5 +381,8 @@ XXX stuff about Starcraft 2 and Evo Chamber
 XXX http://www.pcgamer.com/2010/11/02/computer-program-finds-devastating-starcraft-2-build-orders/
 
 \section{Conclusion}
+
+\bibliographystyle{aaai}
+\bibliography{refs}
 
 \end{document}
