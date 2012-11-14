@@ -279,6 +279,40 @@ is \emph{optimal}.
 For any compatible partial order $\prec$, Skyplan is \emph{optimally efficient}.
 \end{claim}
 \begin{proof} XXX \end{proof}
+	
+
+\section{Concurrency}
+
+In classical planning domains, constructing a search graph is straightforward, with
+transitions corresponding directly to the simple actions available to the agent. However,
+in planning domains that permit multiple simultaneous actions, the state space and the
+search graph need to be augmented slightly for planning to still work properly as a search
+problem. In this work, we use a mild adaptation of the concurrent planning framework described in XXX.
+
+Instead of simply modifications to the state, action effects now have three parts: effects
+that take place immediately upon beginning the action, the duration required before the
+action completes, and effects that take place when the action ends. In order to keep track
+of actions whose completion effects haven't occurred yet, basic states are augmented with
+an \emph{action queue}. An action queue is a multiset of $(a, t)$ pairs, where $a$ is an
+in-progress action, and $t$ is the length of time until that action completes.
+
+The search graph also needs to be modified to handle in-progress actions. First, we'll note
+that in this work, we assume that the cost function used in concurrent planning domains is
+$C_a + \lambda T$, where $C_a$ is the accumulated cost of all basic actions taken, $T$ is
+the total amount of time elapsed, and $\lambda > 0$ is a scaling constant.\footnote{This is
+not a particularly strong assumption; in all the concurrent domains we've observed, the
+actual cost function is simply $T$.} The search graph still contains transitions for all
+basic actions whose preconditions are satisfied, each with the same cost. However, the
+construction of the ending state $n'$ is different: when performing action $a$, only the
+\emph{immediate} effects are applied, and then the pair $(a, d_a)$ is added to the action
+queue, where $d_a$ is the duration of $a$. In addition to the transitions for basic actions, we also need a set of special transitions $\mathrm{elapse\_time}(k)$. The cost of this transition is $\lambda k$, and the effects are: 
+\begin{enumerate}
+	\item For every pair $(a, t)$ on the action queue with $t \le k$, the \emph{completion} effects of $a$ are applied.
+	\item All pairs $(a, t)$ with $t \le k$ are removed from the action queue.
+	\item All pairs $(a, t)$ with $t > k$ are replaced with $(a, t-k)$.
+\end{enumerate}
+
+
 
 \section{Inferring Partial Orders}
 
@@ -289,10 +323,10 @@ planning problem definition. First, we'll describe a partial order for the simpl
 domains without concurrency, and then we'll show how to extend the partial order algorithm
 to accommodate the augmented state representation that is necessary to support concurrency.
 
-When planning with resources, a planning state $n$ can be viewed as a mapping from resource
-types to values. That is, for a given resource $r$, $n(r) \in \R$ is the quantity of that
-resource available at state $n$.\footnote{Many planning state representations also require
-some notion of boolean predicates, but in order to simplify the exposition, for the
+When planning with resources, a basic planning state $n$ can be viewed as a mapping from
+resource types to values. That is, for a given resource $r$, $n(r) \in \R$ is the quantity
+of that resource available at state $n$.\footnote{Many planning state representations also
+require some notion of boolean predicates, but in order to simplify the exposition, for the
 purposes of defining a partial order we view these as special resources that always take
 values in \{0, 1\}.}
 
@@ -361,6 +395,57 @@ Finally, we can define the partial order $\po$:
 	To verify condition 3 of Definition~\ref{def-compatibility}, we only need to consider resources $r$ for which the goal test is $r-$dependent (changes in other resources will not affect the outcome of the test). If the goal test is $r-$positive, then $r \in R^+$ or $r \in R^=$, so $n(r) \le m(r)$. If the goal test is $r-$negative, then $r \in R^-$ or $r \in R^=$, so $n(r) \ge m(r)$. If the goal test is neither (but is $r-$dependent), then $r \in R^=$, so $n(r) = m(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
 	
 	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n'$. By the argument above, if the precondition of this action holds for $n$, then it also holds for $m$. Let $m'$ be the result of taking this action from $m$. By assumption, the cost is identical, and also by assumption, the change in resources from $m$ to $m'$ is identical to that from $n$ to $n'$, which implies that $\forall r, m'(r) - n'(r) = m(r) - n(r)$. Therefore, $\textbf{n'} \po \textbf{m'}$.
+\end{proof}
+
+\subsection{Partial Orders with Action Queues}
+
+\newcommand{\poq}{\preceq_Q}
+
+In concurrent domains, in addition to a collection of resources, the state contains a queue
+of in-progress actions. Here, we'll construct a new partial order $\poq$ that takes the
+action queue into account. To simplify the exposition, we assume that all
+actions have \emph{beneficial} completion effects.\footnote{This assumption is met in all
+domains we consider in this work.} Formally, this means that any resource whose value is
+increased is in $R^+$ or $R^\emptyset$, and any resource whose value is decreased is in
+$R^-$ or $R^\emptyset$. The extension to more general action effects is straightforward.
+\begin{definition}[$\poq$]
+	\label{def-poq}
+	Let $q(n)$ denote the action queue for state $n$. For planning states $\textbf{n} = (n, c)$ and $\textbf{m} = (m, d)$, we say that $\textbf{n} \poq \textbf{m}$ if and only if $\textbf{n} \po \textbf{m}$, and $\forall (a, t) \in q(n)$, at least one of the following conditions holds:
+	\begin{enumerate}
+		\item $\exists$ a distinct $ (a, t') \in q(m)$ with $t' \le t$.
+		\item $\forall r $ affected by the completion effects of $ a$, the change from $n(r)$ to $m(r)$ is at least as big as that produced by $a$, with multiplicity.
+	\end{enumerate}
+\end{definition}
+The notion of a \emph{distinct} pair $(a, t')$ is important, as the same action can appear multiple times in the same action queue. For example, let $a$ be an action whose completion effect is ``Gain 5 $r$''. If $q(n) = \{(a, 10), (a, 20)\}$ then $q(m) = \{(a, 10), (a, 15)\}$ meets this condition, but $q(m) = \{(a, 5)\}$ does not, unless $m(r) \ge n(r) + 5$. Similarly, $q(m) = \{\}$ doesn't meet the condition unless $m(r) \ge n(r) + 10$.
+
+\begin{claim}{}{\label{clm-poq-compatible}}
+	If action costs and effects are deterministic, and all action completion effects are beneficial, then $\poq$ is compatible.
+\end{claim}
+\begin{proof}
+
+	The proof of Claim~\ref{clm-po-compatible} already covers conditions 1 and 3 of
+Definition~\ref{def-compatibility}. There are two types of transitions we need to handle
+for condition 2: basic action transitions, and $\mathrm{elapse\_time}$ transitions. Basic
+actions are also mostly covered by the proof of Claim~\ref{clm-po-compatible}; the only
+difference is that the action queues are modified. The only difference between $q(n)$ and
+$q(n')$ is the addition of $(a, d_a)$, and likewise for $q(m)$ and $q(m')$. Since we
+already know that Condition 2 of Definition~\ref{def-poq} is met by $n$ and $m$, this
+means that it's also met by $n'$ and $m'$, so $\textbf{n'} \poq \textbf{m'}$.
+
+	All that remains is the $\mathrm{elapse\_time}$ transitions. Assume that $n'$ is
+reached by following $\mathrm{elapse\_time}(k)$ from $n$. If we follow $\mathrm{elapse\_time}(k)$ from $m$, we incur the same cost and $m'$ has the following properties: First, for every pair $(a, t) \in q(n)$ with $t \le k$ that is completed as part of the transition, either:
+\begin{enumerate}
+	\item $m$ already had a corresponding resource advantage over $n$ and thus $n'$ does not overtake $m'$, or
+	\item $\exists (a, t') \in q(m)$ with $t' \le t \le k$, and so this action completes and $m'$ gets a corresponding resource improvement.
+\end{enumerate}
+Second, for every pair $(a, t) \in q(n)$ with $t > k$ there is now a pair $(a, t-k)$ in $q(n')$. But in $m'$, one of three conditions holds:
+\begin{enumerate}
+	\item $m$ already had a corresponding resource advantage over $n$, so $m'$ preserves this advantage over $n'$, or
+	\item $\exists (a, t') \in q(m)$ with $k < t' \le t$, so $(a, t'-k)$ is in $q(m')$, or
+	\item $\exists (a, t') \in q(m)$ with $t' \le k \le t$, so $m'$ has gained the necessary resource advantage over $n'$.
+\end{enumerate}
+Taken altogether, this means we still have $\textbf{n} \poq \textbf{m}$.
+
 \end{proof}
 
 \section{Exploiting Heuristic Planners}
