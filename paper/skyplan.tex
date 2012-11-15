@@ -247,7 +247,8 @@ property that is especially applicable to planning problems:
 This recursive definition of compatibility essentially means that
 if a state $n$ is dominated by a state $m$, then it must be the
 case that $n$ is no cheaper than $m$ and that $m$'s successors
-``stay ahead'' of $n$'s. Finally, $F$ must be closed with respect
+``stay ahead'' of $n$'s. For simplicity, we define the successors of %Don't really need. -aloni
+a goal state to consist of only that state. Finally, $F$ must be closed with respect
 to $\succeq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $n \npreceq m$ for all
@@ -265,34 +266,63 @@ specification of a planning problem.
 
 XXX
 
+Before proving the main results of this section, we prove a useful lemma. 
+
+\begin{lemma}{}\label{clm-complete-lemma}
+  Let $p$ be a path to a goal, let $m$ be one state in $p$, and let 
+$p_{m:}$ be the suffix of the path starting from $m$. If $n$ is a state
+with $n \succeq m$, then there is a corresponding path $q$ that reaches a goal state
+through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $cost(q) \leq cost(p)$.
+\end{lemma}
+\begin{proof}
+$p_{m:}=(m,m_{1},\dots,m_{k})$ with $m_{k}$ a goal state.
+By condition (2) of compatibility, $\exists n_{1} \in \mathrm{succ}(n)$ 
+with $n_{1} \succeq m_{1}$ and $cost(n,n_{1}) \leq cost(m,m_{1})$. 
+Similarly, $\exists n_{2},\dots,n_{k}$ with 
+$n_{i} \succeq m_{i}$ and $n_{i+1} \in \mathrm{succ}(n_{i})$ with 
+total cost $\leq cost(p_{m:})$.
+By condition (3) of compatibility, $n_{k} \in F$. By condition (1),
+there is a path from $s$ to $n$ with $g(n) \leq g(m)$. The above argument extends this path
+to the goal state $n_{k}$ and completes the proof of the lemma.
+\end{proof}
+
+This lemma states that if $m \preceq n$, then there is a path from $n$ to a goal
+state that is no longer and no more costly than any such path from $m$.
+While we usually consider states being pruned by other states, the lemma
+allows us to equivalently reason about paths being pruned by other paths.
+In the following proof, we use these notions interchangeably.
+
+
 \begin{claim}{}\label{clm-complete}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{complete}.
 \end{claim}
-\begin{proof} Suppose otherwise, then all paths to all goals must
-have been pruned. Consider one such path $p$ and let $n$ be the
-state in $p$ that was pruned, and let $p_{n:}$ be the suffix of the
-path starting from $n$. Let $m$ be a state with $m \succ n$ that was
-not pruned.  By transitivity of $\preceq$, such a state must exist.
-Then, from condition and (2) and (3) of compatibility, a simple
-inductive argument shows that there must be an analogous path 
-$p^\prime_{m:}$ ending in a goal state.
+\begin{proof}
+Suppose otherwise, then all paths to all goals must
+have been pruned. This would require a cycle of paths pruning each other: 
+paths $p^{1},\dots,p^{k}$ such that $p^{i+1}$ was pruned by $p^{i}$ (letting $p^{0}=p^{k}$) .
+For all paths, let $n_{i+1} \in p^{i+1}$ be the state which pruned $p^{i}$ and
+$m_{i} \in p^{i}$ the corresponding state which was pruned 
+($\forall i: m_{i} \preceq n_{i+1}$).
 
-  XXX We should say something ensuring that no states in $p^\prime$ are pruned.
+Because each $m_{i}$ was pruned before being place in $Open$,
+$n_{i} \neq m_{i}$ nor any state succeeding $m_{i}$ in $p^{i}_{m_{i}:}$.
+Hence $p^{i}_{n_{i}:} \supsetneq p^{i}_{m_{i}:} \implies |p^{i}_{n_{i}:}| > |p^{i}_{m_{i}:}|$.
+By [The Lemma], we also have % \reference?
+ $|p^{i}_{m_{i}:}| \geq |p^{i+1}_{n_{i+1}:}|$. Combining the
+inequalities yields: $|p^{1}_{m_{1}:}| \geq |p^{2}_{n_{2}:}| > |p^{2}_{m_{2}:}| > \dots > |p^{k}_{m_{k}:}| > |p^{1}_{m_{1}:}|$, 
+a contradiction.
 \end{proof}
   
 \begin{claim}{}\label{clm-optimal}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{optimal}.
 \end{claim}
-\begin{proof} Suppose otherwise, then consider an optimal path $p^*$ with final state $f^*$
-  must have been pruned. Let $n$ be the state along $p^*$ that
-  was pruned, and let $m$ be a non-pruned state with $m \succ n$.
-  Then, again from condition (2) and (3), there must be an analogous path
-  starting from $m$ and running to a final state $f^\prime$. Moreover, by condition (1)
-  we have that the total cost of this path $g(f^\prime) \le g(f^*)$, a contradiction.
-
-  XXX We should say something ensuring that no states in $p^\prime$ are pruned.
+\begin{proof} 
+Let $p^{*}$ be the last optimal path that was pruned during a run of Skyplan. 
+By the proof of [Claim 1] and [The Lemma % \reference?
+there is some path $p\prime$ that is not pruned with $cost(p\prime) \leq cost(p^{*})$.
+Thus, $p\prime$ is optimal as well.
 \end{proof}
 
 
