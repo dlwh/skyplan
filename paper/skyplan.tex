@@ -12,6 +12,7 @@
 \usepackage{algpseudocode}
 \usepackage{amsthm}
 \usepackage{natbib}
+\usepackage{graphicx}
 
 \theoremstyle{plain} \newtheorem{theorem}{Theorem} \newtheorem{proposition}{Proposition} \newtheorem{lemma}{Lemma}
 \newtheorem*{corollary}{Corollary}  \newtheorem{claim}{Claim} 
@@ -106,7 +107,12 @@ to one of the two StarCraft domains.
 \section{Skyplan}
 
 \begin{figure}
-  \caption{Pareto Optimality figure}
+	\begin{center}
+	\includegraphics[width=3.3in]{skyline2d.pdf}
+\end{center}
+  \caption{An example set of states in a two-resource planning domain. If
+all pictured states have the same cost, then only those shown as circles are
+worth exploring; the xes can be safely pruned.}
 \end{figure}
 
 We operate in the standard convention of planning as search within
