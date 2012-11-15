@@ -7,8 +7,8 @@ import collection.mutable.ArrayBuffer
  * 
  * @author dlwh
  */
-class HierarchicalAStarSearch[T, Action](treeSearch: Boolean = false) {
-  def search(instances: IndexedSeq[SearchProblem[T, Action]], proj: IndexedSeq[T=>T]):Option[(Path[T, Action], Double)] = {
+class HierarchicalAStarSearch[T, Action](treeSearch: Boolean = false, verbose: Boolean = false) {
+  def  search(instances: IndexedSeq[SearchProblem[T, Action]], proj: IndexedSeq[T=>T]):Option[(Path[T, Action], (Double, Int))] = {
     val numLevels = instances.length
     require(numLevels > 0)
     require(numLevels == proj.length + 1)
@@ -45,7 +45,7 @@ class HierarchicalAStarSearch[T, Action](treeSearch: Boolean = false) {
           val cur = queue.dequeue()
           import cur.{level=>_,_}
           popped += 1
-          if(popped % 1000 == 0) {
+          if(verbose && popped % 1000 == 0) {
             println("Popped " + popped)
           }
 
@@ -98,8 +98,7 @@ class HierarchicalAStarSearch[T, Action](treeSearch: Boolean = false) {
     }
 
 
-
-    for( (goal,cost) <- Searcher.recSearch(0, instances.head.init)) yield goal.toPath.reverse -> cost
+    for( (goal,cost) <- Searcher.recSearch(0, instances.head.init)) yield goal.toPath.reverse -> (cost, popped)
   }
 
 

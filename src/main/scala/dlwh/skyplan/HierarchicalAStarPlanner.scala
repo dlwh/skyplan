@@ -4,6 +4,7 @@ import dlwh.search.{HierarchicalAStarSearch, SearchProblem, AStarSearch}
 import collection.immutable.BitSet
 import dlwh.skyplan.Expression.Global
 import io.Source
+import collection.mutable
 
 /**
  * 
@@ -39,27 +40,47 @@ object HierarchicalAStarPlanner {
     }
 
 
+  def average(seq: IndexedSeq[Double]) = if (seq.size > 0) seq.sum / seq.size else 0.0
+
   def main(args: Array[String]) {
     def slurpResource(str: String) =  {
       Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
     }
-    //    val input = slurpResource("examples/pddl/settlers/domain.pddl")
-    //    val input2 = slurpResource("examples/pddl/settlers/pfile0")
-        val input = slurpResource("examples/pddl/woodworking/p03-domain.pddl")
-        val input2 = slurpResource("examples/pddl/woodworking/p03.pddl")
-//    val input = slurpResource("examples/pddl/openstacks/p01-domain.pddl")
-//    val input2 = slurpResource("examples/pddl/openstacks/p01.pddl")
+    val domainFile = if (args.length >= 2) args(0) else "examples/pddl/woodworking/p03-domain.pddl"
+    val problemFile = if (args.length >= 2) args(1) else "examples/pddl/woodworking/p03.pddl"
+    val input = slurpResource(domainFile)
+    val input2 = slurpResource(problemFile)
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
 
 
     try {
-
+      val maxRuns = 100
       val instance = ProblemInstance.fromPDDL(domain, problem)
+      var times = IndexedSeq.empty[Double]
+      var nodes = IndexedSeq.empty[Double]
+      var costs = IndexedSeq.empty[Double]
       val init = instance.initialState
-      val plan = HierarchicalAStarPlanner.findPlan(instance)
-      assert(plan.nonEmpty,plan)
-      println(plan)
+      for (i <- 0 until maxRuns) {
+        val start = System.currentTimeMillis()
+        val plan = HierarchicalAStarPlanner.findPlan(instance)
+        val stop = System.currentTimeMillis()
+        assert(plan.nonEmpty,plan)
+        println("Run " + (i+1))
+        println("Total time: " + (stop - start))
+        println("Nodes popped: " + plan.get._2._2)
+        println("Plan length: " + plan.get._2._1)
+        println()
+
+        times = times :+ (stop - start).toDouble
+        nodes = nodes :+ plan.get._2._2.toDouble
+        costs = costs :+ plan.get._2._1
+        println("Accumulated averages")
+        println("Total time: " + average(times))
+        println("Nodes popped: " + average(nodes))
+        println("Plan length: " + average(costs))
+        println()
+      }
     } catch {
       case e =>
         e.printStackTrace()
