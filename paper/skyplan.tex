@@ -116,15 +116,15 @@ all pictured states have the same cost, then only those shown as circles are
 worth exploring; the xes can be safely pruned.}
 \end{figure}
 
-We operate in the standard convention of planning as search within
-a weighted directed graph.  A planning problem consists of a directed
-graph $G$ with states $n$ consisting of planning states.  States are
-linked by directed edges with an associated a cost function
-$\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.  There is also a privileged
-initial state $s$, along with a set of goal states $F$.  Further
-define $g(n)$ to be the minimum cost path from $s$ to any state $n$.
-Our goal is to find a path from $s$ to some state $n_g \in F$ with
-the lowest g cost.
+We operate in the standard convention of planning with additive
+costs as search within a weighted directed graph.  A planning problem
+consists of a directed graph $G$ with states $n$ consisting of
+planning states.  States are linked by directed edges with an
+associated a cost function $\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.
+There is also a privileged initial state $s$, along with a set of
+goal states $F$.  Further define $g(n)$ to be the minimum cost path
+from $s$ to any state $n$.  Our goal is to find a path from $s$ to
+some state $n_g \in F$ with the lowest $g$ cost.
 
 
 \subsection{Partial Orders}
@@ -132,20 +132,20 @@ the lowest g cost.
 We will further assume that our graph is endowed with a partial order $\preceq$
 that relates states $n$ to one another, with the intuitive semantics that
 $n \preceq m$ if $n$ is no better than $m$ in any way. For example, in
-our sprockets and widgets example, $n \prec m$ if $n$ has no more widgets and
-no more sprockets than $m$ and if $g(n) \ge g(m)$. Strict dominance
+our sprockets and widgets example, $n \preceq m$ if $n$ has no more widgets and
+no more sprockets than $m$ and if $g(n) \ge g(m)$. Strict dominance $n \prec m$
 holds if $m$ is in addition strictly better than $n$ in some way.
 
 Our goal is to define an optimal search algorithm that can exploit
 this partial order to reduce the search space by only expanding
 states $n$ that are \textit{weakly Pareto optimal}, that is states
-$n$ with $n \nprec n^\prime$ for all states $n^\prime$. For any set of states
-$N$, we define the \textit{skyline} of that set as
-$\textrm{skyline}(N)=\{n: \ne n^\prime \in N: n \prec n^\prime\}$. That is, the
-skyline of a set is those states which are weakly Pareto optimal.
-In subsequent sections, we will give a useful sufficient condition
-under which we can exploit a partial order while preserving correctness
-of optimal graph search algorithms.
+$n$ with $n \nprec n^\prime$ for all states $n^\prime$. For any set
+of states $N$, the \textit{skyline} of that set as
+$\textrm{skyline}(N)=\{n: \not\exists n^\prime \in N: n \prec
+n^\prime\}$. That is, the skyline of a set is those states which
+are weakly Pareto optimal.  In subsequent sections, we will give a
+useful sufficient condition under which we can exploit a partial
+order while preserving correctness of optimal graph search algorithms.
 
 We are not the first to suggest the use of Pareto optimality or
 skyline queries in the context of planning. For example, the
@@ -157,7 +157,7 @@ fewer resources along any axis. Our notion of dominance is more
 general, and we are able to find useful partial orders in more general
 domains.
 
-More recently, in another satsificing planner, \citet{roger2010more}
+More recently, in another satisficing planner, \citet{roger2010more}
 combined multiple heuristics by only expanding those states which
 were currently Pareto optimal with respect to the current open set.
 By contrast, we seek to \textit{prune} search states while still
@@ -166,13 +166,13 @@ maintaining optimality.
 Still others have employed other notions of partial orders while
 maintaining completeness and optimality. These methods largely fall
 into a category known as ``partial order reduction techniques,''
-from computer aided verification. These methods fall into two
-categories: those that prune states and those that prune transitions.
-The former class includes expansion cores \cite{chen09completeness,
-xu11theory}, which select only ``relevant'' actions for any given
-state. The latter consists of methods like commutativity
-pruning~\cite{geffner2000admissible}, which prunes redundant
-permutations of partial plans, and stratified
+which have their origins in computer aided verification. These
+methods fall into two categories: those that prune states and those
+that prune transitions.  The former class includes expansion cores
+\cite{chen09completeness, xu11theory}, which select only ``relevant''
+actions for any given state. The latter consists of methods like
+commutativity pruning~\cite{geffner2000admissible}, which prunes
+redundant permutations of partial plans, and stratified
 planning~\cite{chen2009stratified}, which identifies layers of the
 planning problem and only considers actions appropriate to a given
 layer. \citet{wehrle2012partial} recently showed that all of these
@@ -185,15 +185,17 @@ expansion cores in our system.
 
 \subsection{Algorithm}
 
-Skyplan is a fairly straightforward modifications of Uniform
-Cost Search or A$^*$. For the sake of exposition, we focus on Uniform Cost
-Search, though A$^*$ or any optimal graph search algorithm can
-be modified in the same way.
+Skyplan is a fairly straightforward modifications of a standard optimal search
+algorithm like Uniform Cost
+Search or A$^*$. For the sake of exposition, we focus on Uniform
+Cost Search, though A$^*$ or any optimal graph search algorithm can
+be modified in the same way. (In our experiments we use either A$^*$ or Hierarchical A$^*$.)
 
-Skyplan is defined in Algorithm \ref{alg:skyplan}. Essentially, we run Uniform Cost Search as normal, except that 
-we only expand states that are not strictly dominated by another
-state we've either expanded or enqueued for expansion. That is, we only expand nodes that are in the \textit{skyline}
-of the nodes explored so far.
+Skyplan is defined in Algorithm \ref{alg:skyplan}. Essentially, we
+run Uniform Cost Search as normal, except that we only expand states
+that are not strictly dominated by another state we've either
+expanded or enqueued for expansion. That is, we only expand nodes
+that are in the \textit{skyline} of the nodes explored so far.
 
 \begin{algorithm}
   \begin{algorithmic}[1]
@@ -262,23 +264,22 @@ specification of a planning problem.
 
 XXX
 
-\begin{claim}{}\label{clm-complete}
+\begin{claim}{Completeness}\label{clm-complete}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{complete}.
 \end{claim}
 \begin{proof} Suppose otherwise, then all paths to all goals must
-have been pruned. Consider one such path $p$ and let $n$ be the
-state in $p$ that was pruned, and let $p_{n:}$ be the suffix of the
+have been pruned. Consider the last such path $p$ that was pruned, along
+with the node $n$ that was pruned that led to $p$ being pruned. Let $p_{n:}$ be the suffix of the
 path starting from $n$. Let $m$ be a state with $m \succ n$ that was
-not pruned.  By transitivity of $\preceq$, such a state must exist.
-Then, from condition and (2) and (3) of compatibility, a simple
+not pruned. From condition and (2) and (3) of compatibility, a simple
 inductive argument shows that there must be an analogous path 
 $p^\prime_{m:}$ ending in a goal state.
 
   XXX We should say something ensuring that no states in $p^\prime$ are pruned.
 \end{proof}
   
-\begin{claim}{}\label{clm-optimal}
+\begin{claim}{Optimality}\label{clm-optimal}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{optimal}.
 \end{claim}
