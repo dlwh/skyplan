@@ -5,6 +5,7 @@
 \usepackage{helvet}
 \usepackage{courier}
 \usepackage{amsmath}
+\usepackage{comment}
 \usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage{algorithm}
@@ -222,7 +223,15 @@ that are in the \textit{skyline} of the nodes explored so far.
 
 \subsection{Compatibility}
 \begin{figure}
-  \caption{Compatible partial orders. Partial orders stay ahead.}
+	\begin{center}
+	\includegraphics[width=3.3in]{compatibility-2.pdf}
+\end{center}
+  \vspace{-.2in}
+  \caption{Abstract representation of search with compatible partial
+  orders. Both $m$ and $n$ are reachable from the start state.
+  Because $m$ is a better state than $n$, and $m$'s successors
+  ``stay ahead'' of $n$'s, we can safely avoid expanding $n$ while
+  still preserving optimality.}
 \end{figure}
 
 Not just any partial order on states can be used to preserve optimality. As a perverse
@@ -234,13 +243,13 @@ property that is especially applicable to planning problems:
 
 \begin{definition}[Compatibility]
 	\label{def-compatibility}
-  A partial order $\prec$ is \textit{compatible} if for all states $n \preceq m$,
+  A partial order $\prec$ is \textit{compatible} if for all states $m \preceq n$,
   \begin{enumerate}
-    \item $g(n) \ge g(m)$, and 
-    \item $\forall n^\prime \in \mathrm{succ(n)}$ $\exists m^\prime \in
-      \mathrm{succ}(m^\prime)$ such that $n^\prime \preceq m^\prime$ and
-      $cost(n,n^\prime) \ge cost(m, m^\prime)$, and
-    \item If $n \in F$, then $m \in F$
+    \item $g(n) \le g(m)$, and 
+    \item $\forall m^\prime \in \mathrm{succ(m)}$ $\exists n^\prime \in
+      \mathrm{succ}(n^\prime)$ such that $m^\prime \preceq n^\prime$ and
+      $cost(m,m^\prime) \ge cost(n, n^\prime)$, and
+    \item If $m \in F$, then $n \in F$
   \end{enumerate}
 \end{definition}
 This recursive definition of compatibility essentially means that
@@ -249,8 +258,8 @@ case that $n$ is no cheaper than $m$ and that $m$'s successors
 ``stay ahead'' of $n$'s. Finally, $F$ must be closed with respect
 to $\succeq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
-partial ordering: the trivial order with $n \npreceq m$ for all
-states $n$ and $m$.
+partial ordering: the trivial order with $m \npreceq n$ for all
+states $m$ and $n$.
 
 In planning problems, defining a compatible partial order is usually
 quite easy, so long as cost functions are additive.  Actions are
@@ -264,91 +273,91 @@ specification of a planning problem.
 
 XXX
 
-\begin{claim}{Completeness}\label{clm-complete}
+
+Before proving the main results of this section, we prove a useful lemma. 
+
+\begin{lemma}{}\label{clm-complete-lemma}
+  Let $p$ be a path to a goal, let $m$ be one state in $p$, and let 
+$p_{n:}$ be the suffix of the path starting from $n$. If $m$ is a state
+with $m \succeq n$, then there is a corresponding path $q$ that reaches a goal state
+through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $cost(q) \leq cost(p)$.
+\end{lemma}
+\begin{proof}
+$p_{m:}=(m,m_{1},\dots,m_{k})$ with $m_{k}$ a goal state.
+By condition (2) of compatibility, $\exists n_{1} \in \mathrm{succ}(n)$ 
+with $n_{1} \succeq m_{1}$ and $cost(n,n_{1}) \leq cost(m,m_{1})$. 
+Similarly, $\exists n_{2},\dots,n_{k}$ with 
+$n_{i} \succeq m_{i}$ and $n_{i+1} \in \mathrm{succ}(n_{i})$ with 
+total cost $\leq cost(p_{m:})$.
+By condition (3) of compatibility, $n_{k} \in F$. By condition (1),
+there is a path from $s$ to $n$ with $g(n) \leq g(m)$. The above argument extends this path
+to the goal state $n_{k}$ and completes the proof of the lemma.
+\end{proof}
+
+This lemma states that if $m \preceq n$, then there is a path from $n$ to a goal
+state that is no longer and no more costly than any such path from $m$.
+While we usually consider states being pruned by other states, the lemma
+allows us to equivalently reason about paths being pruned by other paths.
+In the following proof, we use these notions interchangeably.
+
+
+\begin{claim}{}\label{clm-complete}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{complete}.
 \end{claim}
-\begin{proof} Suppose otherwise, then all paths to all goals must
-have been pruned. Consider the last such path $p$ that was pruned, along
-with the node $n$ that was pruned that led to $p$ being pruned. Let $p_{n:}$ be the suffix of the
-path starting from $n$. Let $m$ be a state with $m \succ n$ that was
-not pruned. From condition and (2) and (3) of compatibility, a simple
-inductive argument shows that there must be an analogous path 
-$p^\prime_{m:}$ ending in a goal state.
+\begin{proof}
+Suppose otherwise, then all paths to all goals must
+have been pruned. This would require a cycle of paths pruning each other: 
+paths $p^{1},\dots,p^{k}$ such that $p^{i+1}$ was pruned by $p^{i}$ (letting $p^{0}=p^{k}$) .
+For all paths, let $n_{i+1} \in p^{i+1}$ be the state which pruned $p^{i}$ and
+$m_{i} \in p^{i}$ the corresponding state which was pruned 
+($\forall i: m_{i} \preceq n_{i+1}$).
 
-  XXX We should say something ensuring that no states in $p^\prime$ are pruned.
+Because each $m_{i}$ was pruned before being place in $Open$,
+$n_{i} \neq m_{i}$ nor any state succeeding $m_{i}$ in $p^{i}_{m_{i}:}$.
+Hence $p^{i}_{n_{i}:} \supsetneq p^{i}_{m_{i}:} \implies |p^{i}_{n_{i}:}| > |p^{i}_{m_{i}:}|$.
+By [The Lemma], we also have % \reference?
+ $|p^{i}_{m_{i}:}| \geq |p^{i+1}_{n_{i+1}:}|$. Combining the
+inequalities yields: $|p^{1}_{m_{1}:}| \geq |p^{2}_{n_{2}:}| > |p^{2}_{m_{2}:}| > \dots > |p^{k}_{m_{k}:}| > |p^{1}_{m_{1}:}|$, 
+a contradiction.
 \end{proof}
   
 \begin{claim}{Optimality}\label{clm-optimal}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{optimal}.
 \end{claim}
-\begin{proof} Suppose otherwise, then consider an optimal path $p^*$ with final state $f^*$
-  must have been pruned. Let $n$ be the state along $p^*$ that
-  was pruned, and let $m$ be a non-pruned state with $m \succ n$.
-  Then, again from condition (2) and (3), there must be an analogous path
-  starting from $m$ and running to a final state $f^\prime$. Moreover, by condition (1)
-  we have that the total cost of this path $g(f^\prime) \le g(f^*)$, a contradiction.
-
-  XXX We should say something ensuring that no states in $p^\prime$ are pruned.
+\begin{proof} 
+Let $p^{*}$ be the last optimal path that was pruned during a run of Skyplan. 
+By the proof of Claim \ref{clm-complete} and the lemma 
+there is some path $p^\prime$ that is not pruned with $cost(p^\prime) \leq cost(p^{*})$.
+Thus, $p^\prime$ is optimal as well.
 \end{proof}
 
 
 
+\begin{comment}
 \begin{claim}{}\label{clm-optimally-efficient}
 For any compatible partial order $\prec$, Skyplan is \emph{optimally efficient}.
 \end{claim}
 \begin{proof} XXX \end{proof}
-	
-
-\section{Concurrency}
-
-In classical planning domains, constructing a search graph is straightforward, with
-transitions corresponding directly to the simple actions available to the agent. However,
-in planning domains that permit multiple simultaneous actions, the state space and the
-search graph need to be augmented slightly for planning to still work properly as a search
-problem. In this work, we use a mild adaptation of the concurrent planning framework described in XXX.
-
-Instead of simply modifications to the state, action effects now have three parts: effects
-that take place immediately upon beginning the action, the duration required before the
-action completes, and effects that take place when the action ends. In order to keep track
-of actions whose completion effects haven't occurred yet, basic states are augmented with
-an \emph{action queue}. An action queue is a multiset of $(a, t)$ pairs, where $a$ is an
-in-progress action, and $t$ is the length of time until that action completes.
-
-The search graph also needs to be modified to handle in-progress actions. First, we'll note
-that in this work, we assume that the cost function used in concurrent planning domains is
-$C_a + \lambda T$, where $C_a$ is the accumulated cost of all basic actions taken, $T$ is
-the total amount of time elapsed, and $\lambda > 0$ is a scaling constant.\footnote{This is
-not a particularly strong assumption; in all the concurrent domains we've observed, the
-actual cost function is simply $T$.} The search graph still contains transitions for all
-basic actions whose preconditions are satisfied, each with the same cost. However, the
-construction of the ending state $n'$ is different: when performing action $a$, only the
-\emph{immediate} effects are applied, and then the pair $(a, d_a)$ is added to the action
-queue, where $d_a$ is the duration of $a$. In addition to the transitions for basic actions, we also need a set of special transitions $\mathrm{elapse\_time}(k)$. The cost of this transition is $\lambda k$, and the effects are: 
-\begin{enumerate}
-	\item For every pair $(a, t)$ on the action queue with $t \le k$, the \emph{completion} effects of $a$ are applied.
-	\item All pairs $(a, t)$ with $t \le k$ are removed from the action queue.
-	\item All pairs $(a, t)$ with $t > k$ are replaced with $(a, t-k)$.
-\end{enumerate}
-
-
+\end{comment}
 
 \section{Inferring Partial Orders}
 
 \newcommand{\po}{\preceq_R}
 
-In this section, we show how to automatically infer a compatible partial order from a
-planning problem definition. First, we'll describe a partial order for the simpler case of
-domains without concurrency, and then we'll show how to extend the partial order algorithm
-to accommodate the augmented state representation that is necessary to support concurrency.
+In this section, we show how to automatically infer a compatible
+partial order from a classical planning problem domain's specification,
+such as PDDL.~\cite{ghallab1998pddl,fox2003pddl2} In the next
+section, we will extend this algorithm to a broad class of concurrent
+domains.
 
 When planning with resources, a basic planning state $n$ can be viewed as a mapping from
 resource types to values. That is, for a given resource $r$, $n(r) \in \R$ is the quantity
-of that resource available at state $n$.\footnote{Many planning state representations also
-require some notion of boolean predicates, but in order to simplify the exposition, for the
+of that resource available at state $n$. Most planning state representations also
+require some notion of boolean propositions, but in order to simplify the exposition, for the
 purposes of defining a partial order we view these as special resources that always take
-values in \{0, 1\}.}
+values in \{0, 1\}.
 
 If we want to determine whether a state $\mathbf{n}$ dominates $\mathbf{m}$, then we need
 to know two things: first, does $\mathbf{n}$ have lower cost, and second, does $\mathbf{n}$
@@ -359,7 +368,8 @@ There are basically two ways in which the value of a particular resource can mat
 either contribute to satisfying the goal test $n \in F$, or it can contribute to satisfying
 the precondition of some action that might get us closer to the goal. In both cases, we're
 concerned with the relationship between the value of a particular resource $r$, and a
-particular boolean predicate $b$. In general, we want to know when it helps to have more (or less) of a particular resource, so we formalize the relationship with the following notions:
+particular boolean predicate $b$. In general, we want to know when it helps to have more (or less) of a particular resource, leading us to the following classification
+of predicates based on how they interact with a given resource. Let $b(n)$ be the value of the predicate $b$ in state $n$.
 \begin{definition}[$r$-Dependent]
 A predicate $b$ is $r$-\textit{dependent} if $\exists n, n^\prime$ with $b(n) = \text{true}$ and $b(n^\prime) = \text{false}$, but where $n$ and $n^\prime$ are identical except that $n(r) \ne n^\prime(r)$.
 \end{definition}
@@ -381,12 +391,12 @@ For example, the predicate ``$n(r) \ge 1$'' is $r$-positive, the predicate ``$n(
 
 Using these definitions, we can construct a partial order based on three parts of the problem definition:
 \begin{enumerate}
-	\item The set of resources.\footnote{Many planning domains use first-order value functions and predicates. For these, each possible grounded instantiation is treated as a separate resource.}
-	\item The set of possible actions, particularly their preconditions.\footnote{Again, for first-order actions, all possible groundings are considered separately.}
+	\item The set of (grounded, where applicable) resources.
+	\item The set of possible (grounded) actions, particularly their preconditions.
 	\item The goal test: $n \in F$.
 \end{enumerate}
 
-Let $B$ be the set of all relevant predicates (the preconditions for each action, plus the goal test). Then we partition all the resources into four disjoint sets: $R^+$, $R^-$, $R^=$, and $R^\emptyset$, according to the following criteria:
+Let $B$ be the set of all relevant predicates, that is the set of preconditions for each action plus the goal test. Then we partition all the resources into four disjoint sets: $R^+$, $R^-$, $R^=$, and $R^\emptyset$, according to the following criteria:
 \begin{itemize}
 	\item $r \in R^+$ if $\forall b \in B, b$ is $r$-dependent implies that $b$ is $r$-positive, and $\exists$ at least one $b \in B$ that is $r$-positive.
 	\item $r \in R^-$ if $\forall b \in B, b$ is $r$-dependent implies that $b$ is $r$-negative, and $\exists$ at least one $b \in B$ that is $r$-negative.
@@ -407,7 +417,7 @@ Finally, we can define the partial order $\po$:
 \end{definition}
 
 \begin{claim}{}{\label{clm-po-compatible}}
-	If action costs and effects are deterministic (do not depend on the current state),\footnote{Note that if a domain does have context-dependent actions, and if the mapping from states to costs/effects is discrete, then each non-deterministic action can be replaced with a set of deterministic actions with varying preconditions.} then $\po$ is compatible.
+	If action costs and effects do not depend on the current state, then $\po$ is compatible.
 \end{claim}
 \begin{proof}
 	Condition 1 of Definition~\ref{def-compatibility} follows directly from condition 1 of Definition~\ref{def-po}.
@@ -419,7 +429,73 @@ Finally, we can define the partial order $\po$:
   n^\prime(r) = m(r) - n(r)$. Therefore, $\mathbf{n^\prime} \po \mathbf{m^\prime}$.
 \end{proof}
 
-\subsection{Partial Orders with Action Queues}
+A few remarks are in order with regard to this inferred ordering.
+First, it may not be the best such ordering. Consider a domain in
+which we need can use sprockets to make a transmogrifier (sp?), but
+not widgets. However, suppose there is a free conversion from widgets
+to sprockets, and vice versa---because sprockets are in fact just
+upside down widgets. In this case, sprockets and widgets are
+interchangeable, and so we can actually prune based on the sum of
+their count. However, this method is incapable of realizing this
+relationship. In general we suspect that it is intractable to find the
+optimal partial ordering, but that such perverse examples
+as the one just described are rare.
+
+Second, there are occasionally resources that are usually beneficial,
+but they might have some upper limit. For instance, we might like
+to have as many widgets as possible, except that we have only a
+large but finite amount of storage space for them.  In this case,
+we would not be able to prune based on the number of widgets: its
+resource would necessarily be in $R^=$. However, if the maximum
+number of widgets is indeed so high that we suspect that we will
+not reach it in search, we can treat it as though there was no
+limit. If we do in fact hit the limit, we then have to re-enqueue
+all nodes pruned based on widget count, and back off to the original
+partial order.
+
+\section{Partial Orders and Concurrency} 
+
+In classical planning domains, constructing a search graph is
+straightforward, with transitions corresponding directly to the
+simple actions available to the agent. However, in planning domains
+that permit multiple simultaneous actions, the state space and the
+search graph need to be augmented slightly for planning to still
+work properly as a search problem. In this work, we use a mild
+adaptation of the concurrent planning framework described in XXX.
+First, we briefly describe this representation, and then describe
+the extension of the partial order inference to concurrent domains.
+
+\subsection{Modeling Concurrency}
+
+The main modification is that each action no longer necessarily
+makes only atomic modifications to a state. Instead, action effects
+now have three parts: effects that take place immediately upon
+beginning the action, the duration required before the action
+completes, and effects that take place when the action ends. In
+order to keep track of actions whose completion effects haven't
+occurred yet, basic states are augmented with an \emph{action queue}.
+An action queue is a multiset of $(a, t)$ pairs, where $a$ is an
+in-progress action, and $t$ is the length of time until that action
+completes.
+
+The search graph also needs to be modified to handle in-progress actions. First, 
+in this work, we assume that the cost function used in concurrent planning domains is
+$C_a + \lambda T$, where $C_a$ is the accumulated cost of all basic actions taken, $T$ is
+the total amount of time elapsed, and $\lambda > 0$ is a scaling constant. The search graph still contains transitions for all
+basic actions whose preconditions are satisfied, each with the same cost. However, the
+construction of the ending state $n^\prime$ is different: when performing action $a$, only the
+\emph{immediate} effects are applied, and then the pair $(a, d_a)$ is added to the action
+queue, where $d_a$ is the duration of $a$. 
+In addition to the transitions for basic actions, we also need a set of special transitions
+$\mathrm{elapse\_time}(k)$. The cost of this transition is $\lambda k$, and the effects are: 
+\begin{enumerate}
+	\item For every pair $(a, t)$ on the action queue with $t \le k$, the \emph{completion} effects of $a$ are applied.
+	\item All pairs $(a, t)$ with $t \le k$ are removed from the action queue.
+	\item All pairs $(a, t)$ with $t > k$ are replaced with $(a, t-k)$.
+\end{enumerate}
+
+
+\subsection{Inferring Partial Orders with Action Queues}
 
 \newcommand{\poq}{\preceq_Q}
 
@@ -428,17 +504,18 @@ of in-progress actions. Here, we'll construct a new partial order $\poq$ that ta
 action queue into account. To simplify the exposition, we assume that all
 actions have \emph{beneficial} completion effects.\footnote{This assumption is met in all
 domains we consider in this work.} Formally, this means that any resource whose value is
-increased is in $R^+$ or $R^\emptyset$, and any resource whose value is decreased is in
+increased at completion is in $R^+$ or $R^\emptyset$, and any resource whose value is decreased is in
 $R^-$ or $R^\emptyset$. The extension to more general action effects is straightforward.
 \begin{definition}[$\poq$]
 	\label{def-poq}
 	Let $q(n)$ denote the action queue for state $n$. For planning states $\textbf{n} = (n, c)$ and $\textbf{m} = (m, d)$, we say that $\textbf{n} \poq \textbf{m}$ if and only if $\textbf{n} \po \textbf{m}$, and $\forall (a, t) \in q(n)$, at least one of the following conditions holds:
 	\begin{enumerate}
-		\item $\exists$ a distinct $ (a, t') \in q(m)$ with $t' \le t$.
-		\item $\forall r $ affected by the completion effects of $ a$, the change from $n(r)$ to $m(r)$ is at least as big as that produced by $a$, with multiplicity.
+		\item $\exists$ a distinct $ (a, t^\prime) \in q(m)$ with $t^\prime \le t$.
+		\item $\forall r $ affected by the completion effects of $ a$, the change from $n(r)$ to $m(r)$ is at least as big as that produced by $a$, with multiplicity. XXX burkett, what does this mean?
 	\end{enumerate}
 \end{definition}
-The notion of a \emph{distinct} pair $(a, t')$ is important, as the same action can appear multiple times in the same action queue. For example, let $a$ be an action whose completion effect is ``Gain 5 $r$''. If $q(n) = \{(a, 10), (a, 20)\}$ then $q(m) = \{(a, 10), (a, 15)\}$ meets this condition, but $q(m) = \{(a, 5)\}$ does not, unless $m(r) \ge n(r) + 5$. Similarly, $q(m) = \{\}$ doesn't meet the condition unless $m(r) \ge n(r) + 10$.
+The notion of a \emph{distinct} pair $(a, t^\prime)$ is important, as the same action can appear multiple times in the same action queue. For example, let $a$ be an action whose completion effect is ``Gain 5 $r$''. If $q(n) = \{(a, 10), (a, 20)\}$ then $q(m) = \{(a, 10),
+(a, 15)\}$ meets this condition, but $q(m) = \{(a, 5)\}$ does not, unless $m(r) \ge n(r) + 5$. Similarly, $q(m) = \{\}$ does not meet the condition unless $m(r) \ge n(r) + 10$.
 
 \begin{claim}{}{\label{clm-poq-compatible}}
 	If action costs and effects are deterministic, and all action completion effects are beneficial, then $\poq$ is compatible.
@@ -449,28 +526,31 @@ The notion of a \emph{distinct} pair $(a, t')$ is important, as the same action 
 Definition~\ref{def-compatibility}. There are two types of transitions we need to handle
 for condition 2: basic action transitions, and $\mathrm{elapse\_time}$ transitions. Basic
 actions are also mostly covered by the proof of Claim~\ref{clm-po-compatible}; the only
-difference is that the action queues are modified. The only difference between $q(n)$ and
-$q(n')$ is the addition of $(a, d_a)$, and likewise for $q(m)$ and $q(m')$. Since we
+difference is that the action queues are modified. $q(n)$ and
+$q(n^\prime)$ differ only in the addition of $(a, d_a)$, and likewise for $q(m)$ and $q(m^\prime)$. Since we
 already know that Condition 2 of Definition~\ref{def-poq} is met by $n$ and $m$, this
-means that it's also met by $n'$ and $m'$, so $\textbf{n'} \poq \textbf{m'}$.
+means that it is also met by $n^\prime$ and $m^\prime$, so $\textbf{n}^\prime \poq \textbf{m}^\prime$.
 
-	All that remains is the $\mathrm{elapse\_time}$ transitions. Assume that $n'$ is
-reached by following $\mathrm{elapse\_time}(k)$ from $n$. If we follow $\mathrm{elapse\_time}(k)$ from $m$, we incur the same cost and $m'$ has the following properties: First, for every pair $(a, t) \in q(n)$ with $t \le k$ that is completed as part of the transition, either:
+	All that remains is the $\mathrm{elapse\_time}$ transitions. Assume that $n^\prime$ is
+reached by following $\mathrm{elapse\_time}(k)$ from $n$. If we follow $\mathrm{elapse\_time}(k)$ from $m$, we incur the same cost and $m^\prime$ has the following two properties. First, for every pair $(a, t) \in q(n)$ with $t \le k$ that is completed as part of the transition, either:
 \begin{enumerate}
-	\item $m$ already had a corresponding resource advantage over $n$ and thus $n'$ does not overtake $m'$, or
-	\item $\exists (a, t') \in q(m)$ with $t' \le t \le k$, and so this action completes and $m'$ gets a corresponding resource improvement.
+	\item $m$ already had a corresponding resource advantage over $n$ and thus $n^\prime$ does not overtake $m^\prime$, or
+	\item $\exists (a, t^\prime) \in q(m)$ with $t^\prime \le t \le k$, and so this action completes and $m^\prime$ gets a corresponding resource improvement.
 \end{enumerate}
-Second, for every pair $(a, t) \in q(n)$ with $t > k$ there is now a pair $(a, t-k)$ in $q(n')$. But in $m'$, one of three conditions holds:
+Second, for every pair $(a, t) \in q(n)$ with $t > k$ there is now a pair $(a, t-k)$ in $q(n^\prime)$. But in $m^\prime$, one of three conditions holds:
 \begin{enumerate}
-	\item $m$ already had a corresponding resource advantage over $n$, so $m'$ preserves this advantage over $n'$, or
-	\item $\exists (a, t') \in q(m)$ with $k < t' \le t$, so $(a, t'-k)$ is in $q(m')$, or
-	\item $\exists (a, t') \in q(m)$ with $t' \le k \le t$, so $m'$ has gained the necessary resource advantage over $n'$.
+	\item $m$ already had a corresponding resource advantage over $n$, so $m^\prime$ preserves this advantage over $n^\prime$, or
+	\item $\exists (a, t^\prime) \in q(m)$ with $k < t^\prime \le t$, so $(a, t^\prime-k)$ is in $q(m^\prime)$, or
+	\item $\exists (a, t^\prime) \in q(m)$ with $t^\prime \le k \le t$, so $m^\prime$ has gained the necessary resource advantage over $n^\prime$.
 \end{enumerate}
 Taken altogether, this means we still have $\textbf{n} \poq \textbf{m}$.
 
 \end{proof}
 
 \section{Skyplan in Practice}
+
+Thus the basic outline of our system is fairly straightforward.
+Given a planning problem, Skyplan infers the partial ord
 
 There are a few pragmatic details of our system that can substantially
 affect performance that are worth mentioning. One is our choice of
@@ -516,8 +596,9 @@ so they are not likely to be useful here.
 The obvious, na\"ive solution is to maintain a list of all elements
 in the current the skyline, and to check all of these elements when
 deciding whether or not to add an element to the skyline. Unfortunately,
-this is clearly quadratic in the number of states, which in practice
-can overwhelm the benefits from
+this check is clearly linear in the number of states (which means
+we must make quadratically many checks), In practice, this
+runtime can overwhelm the benefit obtained from pruning the branching factor.
 
 However, note that in high dimensions most states are clearly not
 related to one another.  They might both have different positive
@@ -525,7 +606,7 @@ propositions, with one not having strictly more than another.
 Therefore, we can quickly do a ``coarse'' version of a skyline query
 by having a list of sets, one for each resource or proposition,
 that contains all states in the skyline that have a positive value
-for that resource if the resource is XXX what kind of positive, and
+for that resource if the resource is in $R^+$, and
 vice versa if negative. Then, when deciding whether or not a new
 state is dominated, we can simple intersect these sets, and then
 run the check on those states in the intersection. Because most
