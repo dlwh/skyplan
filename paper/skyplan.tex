@@ -24,6 +24,7 @@
 \theoremstyle{remark} \newtheorem*{remark}{Remark} \newtheorem*{note}{Note} \newtheorem{case}{Case}
 
 \newcommand{\R}{\mathbb{R}}
+\newcommand{\Astar}{A$^*$}
 
 \frenchspacing
 \pdfinfo{
@@ -79,7 +80,7 @@ dominance to prune states that are strictly dominated by some other
 states. More specifically, we give conditions under which we can
 expand only those states in the \textit{skyline}, that is, states
 that are not dominated by any another state. Our system, Skyplan,
-is a refinement of Uniform Cost Search or A$^*$ that expands only
+is a refinement of Uniform Cost Search or \Astar that expands only
 those states that are on the skyline.
 
 The central idea underlying our approach is to define a partial
@@ -91,7 +92,7 @@ taken), and it is better in one or more ways.
 
 In addition to proving the correctness of our approach, we also
 show how to automatically infer such a partial order from a problem
-specification such as PDDL.~\cite{ghallab1998pddl,fox2003pddl2}
+specification such as PDDL~\citep{ghallab1998pddl,fox2003pddl2}.
 This procedure is fairly intuitive: one simply needs to determine
 which resources or propositions are uniformly good or bad, and---for 
 domains with durative actions---which actions have uniformly
@@ -102,7 +103,7 @@ of $A^*$ on several (XXX) job shop domains. In addition, we introduce
 two new domains, based on the popular video game StarCraft. (XXX
 we should credit evo chamber for one of them.) Skyplan performs
 especially well in these scenarios, cutting the branching factor
-by as much as 99\% compared to A$^*$.  Furthermore, we compare our
+by as much as 99\% compared to \Astar.  Furthermore, we compare our
 algorithm to a heuristic open source planner specifically engineered
 to one of the two StarCraft domains.
 
@@ -150,7 +151,7 @@ order while preserving correctness of optimal graph search algorithms.
 
 We are not the first to suggest the use of Pareto optimality or
 skyline queries in the context of planning. For example, the
-non-optimal Metric-FF planner~\cite{hoffmann2003metric} employed a
+non-optimal Metric-FF planner~\citep{hoffmann2003metric} employed a
 more limited notion of dominance, requiring that all propositions
 be the same between two states, the domain to be monotonically
 ``good'' in all resources, and for the dominating state to have no
@@ -170,16 +171,16 @@ into a category known as ``partial order reduction techniques,''
 which have their origins in computer aided verification. These
 methods fall into two categories: those that prune states and those
 that prune transitions.  The former class includes expansion cores
-\cite{chen09completeness, xu11theory}, which select only ``relevant''
+\citep{chen09completeness, xu11theory}, which select only ``relevant''
 actions for any given state. The latter consists of methods like
-commutativity pruning~\cite{geffner2000admissible}, which prunes
+commutativity pruning~\citep{geffner2000admissible}, which prunes
 redundant permutations of partial plans, and stratified
-planning~\cite{chen2009stratified}, which identifies layers of the
+planning~\citep{chen2009stratified}, which identifies layers of the
 planning problem and only considers actions appropriate to a given
 layer. \citet{wehrle2012partial} recently showed that all of these
 techniques are special cases of more general techniques from computer
-aided verification, namely sleep sets~\cite{godefroid96partial} and
-stubborn sets~\cite{valmari92stubborn}. These methods are largely
+aided verification, namely sleep sets~\citep{godefroid96partial} and
+stubborn sets~\citep{valmari92stubborn}. These methods are largely
 orthogonal to our approach. Indeed we use something not unlike
 expansion cores in our system.
 
@@ -188,19 +189,28 @@ expansion cores in our system.
 
 Skyplan is a fairly straightforward modifications of a standard optimal search
 algorithm like Uniform Cost
-Search or A$^*$. For the sake of exposition, we focus on Uniform
-Cost Search, though A$^*$ or any optimal graph search algorithm can
-be modified in the same way. (In our experiments we use either A$^*$ or Hierarchical A$^*$.)
+Search or \Astar. For the sake of exposition, we focus on Uniform
+Cost Search, though \Astar or any optimal graph search algorithm can
+be modified in the same way. (In our experiments we use either \Astar or Hierarchical \Astar.)
 
 Skyplan is defined in Algorithm \ref{alg:skyplan}. Essentially, we
 run Uniform Cost Search as normal, except that we only expand states
 that are not strictly dominated by another state we've either
 expanded or enqueued for expansion. That is, we only expand nodes
-that are in the \textit{skyline} of the nodes explored so far.
+that are in the \textit{skyline} of the nodes we know about so far.
+
+Depending on the successor function, one might also want to compute
+the skyline of the successors of the state being expanded and only
+attempt to enqueue those nodes.  This check is purely an optimization,
+not affecting optimality or completeness. Whether or not it is
+useful depends on the kinds of search operators being applied: if
+there are many similar successors to a state, this can prune a very large
+number of states. However, if most actions are very different, it will
+likely have no effect.
 
 \begin{algorithm}
   \begin{algorithmic}[1]
-    \Procedure{Skyplan}{XXX}
+    \Procedure{UCSSkyplan}{$s, G, F, \preceq$}
     \State Initialize $Open=\{\langle s,0\rangle\}$, $Closed=\{\}$, $Pruned=\{\}$
     \While{ $Open$ is not empty}
     \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in Open$
@@ -208,16 +218,17 @@ that are in the \textit{skyline} of the nodes explored so far.
       \If {$n\in F$} 
         \State \Return the path to $n$ following back pointers
       \EndIf
-      \For {$n^\prime\in\mathrm{succ}(n)$} 
-      \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
-        \If {$\forall m \in Open \cup Closed. n^\prime \nprec m$}
-        \State $\mathbf{n^\prime} \rightarrow Open$
-        \EndIf
-      \EndFor
+      \If {$\forall m \in Open \cup Closed. n^\prime \nprec m$}
+        \For {$n^\prime\in\mathrm{succ}(n)$} 
+        \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
+          \State $\mathbf{n^\prime} \rightarrow Open$
+        \EndFor
+      \EndIf
     \EndWhile
+    \State fail
   \EndProcedure
   \end{algorithmic}
-\caption{Skyplan}
+\caption{An implementation of Skyplan based on uniform cost search.  }
 \label{alg:skyplan}
 \end{algorithm}
 
@@ -248,7 +259,7 @@ property that is especially applicable to planning problems:
     \item $g(n) \le g(m)$, and 
     \item $\forall m^\prime \in \mathrm{succ(m)}$ $\exists n^\prime \in
       \mathrm{succ}(n^\prime)$ such that $m^\prime \preceq n^\prime$ and
-      $cost(m,m^\prime) \ge cost(n, n^\prime)$, and
+      $\mathrm{cost}(m,m^\prime) \ge \mathrm{cost}(n, n^\prime)$, and
     \item If $m \in F$, then $n \in F$
   \end{enumerate}
 \end{definition}
@@ -271,21 +282,20 @@ specification of a planning problem.
 
 \subsection{Analysis}
 
-XXX
-
-
-Before proving the main results of this section, we prove a useful lemma. 
+In this section, we show that Skyplan is complete and optimal for 
+any compatible partial order, when used in conjunction with an optimal
+search algorithm like Uniform Cost Search or \Astar Before proving the main results of this section, we prove a useful lemma. 
 
 \begin{lemma}{}\label{clm-complete-lemma}
   Let $p$ be a path to a goal, let $m$ be one state in $p$, and let 
 $p_{n:}$ be the suffix of the path starting from $n$. If $m$ is a state
 with $m \succeq n$, then there is a corresponding path $q$ that reaches a goal state
-through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $cost(q) \leq cost(p)$.
+through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $\mathrm{cost}(q) \leq \mathrm{cost}(p)$.
 \end{lemma}
 \begin{proof}
 $p_{m:}=(m,m_{1},\dots,m_{k})$ with $m_{k}$ a goal state.
 By condition (2) of compatibility, $\exists n_{1} \in \mathrm{succ}(n)$ 
-with $n_{1} \succeq m_{1}$ and $cost(n,n_{1}) \leq cost(m,m_{1})$. 
+with $n_{1} \succeq m_{1}$ and $\mathrm{cost}(n,n_{1}) \leq \mathrm{cost}(m,m_{1})$. 
 Similarly, $\exists n_{2},\dots,n_{k}$ with 
 $n_{i} \succeq m_{i}$ and $n_{i+1} \in \mathrm{succ}(n_{i})$ with 
 total cost $\leq cost(p_{m:})$.
@@ -316,7 +326,7 @@ $m_{i} \in p^{i}$ the corresponding state which was pruned
 Because each $m_{i}$ was pruned before being place in $Open$,
 $n_{i} \neq m_{i}$ nor any state succeeding $m_{i}$ in $p^{i}_{m_{i}:}$.
 Hence $p^{i}_{n_{i}:} \supsetneq p^{i}_{m_{i}:} \implies |p^{i}_{n_{i}:}| > |p^{i}_{m_{i}:}|$.
-By [The Lemma], we also have % \reference?
+By the lemma, we also have % \reference?
  $|p^{i}_{m_{i}:}| \geq |p^{i+1}_{n_{i+1}:}|$. Combining the
 inequalities yields: $|p^{1}_{m_{1}:}| \geq |p^{2}_{n_{2}:}| > |p^{2}_{m_{2}:}| > \dots > |p^{k}_{m_{k}:}| > |p^{1}_{m_{1}:}|$, 
 a contradiction.
@@ -346,9 +356,13 @@ For any compatible partial order $\prec$, Skyplan is \emph{optimally efficient}.
 
 \newcommand{\po}{\preceq_R}
 
-In this section, we show how to automatically infer a compatible
-partial order from a classical planning problem domain's specification,
-such as PDDL.~\cite{ghallab1998pddl,fox2003pddl2} In the next
+Now that we have a definition of compatible partial orders and an
+algorithm that can take advatage of them, all we need is a method
+for finding them. Of course, one can construct them by hand using
+domain knowledge, but that is less than satisfactory. In this
+section, we show how to automatically infer a compatible partial
+order from a classical planning problem domain's specification,
+such as PDDL.~\citep{ghallab1998pddl,fox2003pddl2} In the next
 section, we will extend this algorithm to a broad class of concurrent
 domains.
 
@@ -554,16 +568,16 @@ Given a planning problem, Skyplan infers the partial ord
 
 There are a few pragmatic details of our system that can substantially
 affect performance that are worth mentioning. One is our choice of
-Hierarchical A$^*$ as base search algorithm, since we found to be
+Hierarchical \Astar as base search algorithm, since we found to be
 one of the best algorithms. The other is the somewhat more mundane
 question of how best to implement a skyline query for our setting.
 In this section, we discuss each in turn.
 
-\subsection{Hierarchical A$^*$}
+\subsection{Hierarchical \Astar}
 
 While skyline pruning works with any optimal search procedure, this
-pruning method has a particular synergy with the Hierarchical A$^*$
-algorithm~\cite{holte1996hierarchical}. Hierarchical A$^*$ works
+pruning method has a particular synergy with the Hierarchical \Astar
+algorithm~\citep{holte1996hierarchical}. Hierarchical \Astar works
 by identifying a series of relaxations to the search space, and
 uses each level of relaxation as the (admissible and consistent)
 heuristic for the corresponding lower level. 
@@ -579,7 +593,7 @@ we use the partial order $\po$ defined on the original search problem
 (that is, with the full goal test). Thus, when expanding a lower
 level state, we can prune any of its successors if they are dominated
 by a state at \textit{any} level of the hierarchy.  In particular,
-the combination of Hierarchical A$^*$ and skyline pruning means
+the combination of Hierarchical \Astar and skyline pruning means
 that the projected searches give us two sources of information: how
 far a state is from a (partial) goal, and which states are not
 possibly on the optimal path to the full goal. likely XXX Experiments
@@ -589,8 +603,8 @@ on this.
 
 The implementation of skyline pruning is somewhat delicate.  There
 is some work in this area in the database literature, but these are
-not designed for online applications~\cite{skylineoperator,tan01efficient}
-or are for fairly low dimensional states~\cite{KossmannRR02}, and
+not designed for online applications~\citep{skylineoperator,tan01efficient}
+or are for fairly low dimensional states~\citep{KossmannRR02}, and
 so they are not likely to be useful here.
 
 The obvious, na\"ive solution is to maintain a list of all elements
