@@ -34,15 +34,14 @@ class HierarchicalSkylineSearch[T, Action](oracleFactory: Oracle.Factory[T], tre
     val heuristics: Array[mutable.Map[T, Double]] = Array.fill(numLevels)(mutable.Map[T, Double]())
     val skyline = oracleFactory.make
 
-    def fillOutHValues(level: Int, cur: State, cost: Double) {
-      for(ss <- cur.states) {
-        val c = cost - ss.cost
-        if(heuristics(level).contains(ss.t)) {
-          return
-        }
-        heuristics(level)(cur.t) = c
+    def fillOutHValues(level: Int, goal: State, costToGoal: Double) {
+      for(ss <- goal.states) {
+        val c = costToGoal - ss.cost
+        heuristics(level)(ss.t) = c
       }
     }
+
+
 
     implicit val ordProblem:Ordering[RecursiveProblem] = Ordering[Double].on(-_.currentEstimate)
 
@@ -84,7 +83,7 @@ class HierarchicalSkylineSearch[T, Action](oracleFactory: Oracle.Factory[T], tre
                 if(level == 0)
                   throw new HappyException(cur, cost)
                 else {
-                  fillOutHValues(level, cur, cost - initialCost)
+                  fillOutHValues(level, cur, cost)
                 }
                 Some(cost - initialCost)
               } /*else if(heuristics(level).contains(t)) {

@@ -29,41 +29,74 @@ object HierarchicalSkyplan {
     }
 
     val oracle = if(skyplan) StateSkyline.factory(inst) else Oracle.allAllowed[State]
-    val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]](oracle, treeSearch = true)
+    val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]](oracle)
 //        val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]](Oracle.allAllowed, treeSearch = true)
     search.search(projected, IndexedSeq.fill(projected.length - 1)(identity))
   }
 
   def projectionHierarchy(inst: ProblemInstance):IndexedSeq[ProblemInstance] = inst.goal match {
-    case AndCondition(cs)  if cs.length > 4 =>  inst +: projectionHierarchy(inst.copy(goal=AndCondition(cs.take(3))))
+    case AndCondition(cs) if cs.length > 4 =>  inst +: projectionHierarchy(inst.copy(goal=AndCondition(cs.take(4))))
     case _ =>  IndexedSeq(inst)
   }
 
 
 
-  def average(seq: IndexedSeq[Double]) = if (seq.size > 0) seq.sum / seq.size else 0.0
+  def warmupHotspot() {
+    def slurpResource(str: String) =  {
+      Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
+    }
+    val domainFile = "examples/pddl/woodworking/p03-domain.pddl"
+    val problemFile = "examples/pddl/woodworking/p03.pddl"
+    val input = slurpResource(domainFile)
+    val input2 = slurpResource(problemFile)
+    val domain = PDDL.parseDomain(input)
+    val problem = PDDL.parseProblem(input2)
+
+    val maxRuns = 3
+    val instance = ProblemInstance.fromPDDL(domain, problem)
+    for (i <- 0 until maxRuns) {
+      val start = System.currentTimeMillis()
+      val plan = HierarchicalSkyplan.findPlan(instance)
+      val stop = System.currentTimeMillis()
+      assert(plan.nonEmpty,plan)
+      println("Hotspot Warmup Run " + (i+1))
+      println("Total time: " + (stop - start))
+      println()
+    }
+  }
+
 
   def main(args: Array[String]) {
     def slurpResource(str: String) =  {
       Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
     }
-    val domainFile = if (args.length >= 2) args(0) else "examples/pddl/woodworking/p03-domain.pddl"
-    val problemFile = if (args.length >= 2) args(1) else "examples/pddl/woodworking/p03.pddl"
-    val skyplan = args.length <= 2 || args(2).toBoolean
+    val skyplan = args.length < 1 || args(0).toBoolean
+    val domainFile = if (args.length >= 3) args(1) else "examples/pddl/woodworking/p03-domain.pddl"
+    val problemFile = if (args.length >= 3) args(2) else "examples/pddl/woodworking/p03.pddl"
     val input = slurpResource(domainFile)
     val input2 = slurpResource(problemFile)
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
 
     if(skyplan) {
-      println("Skyplan!")
+      println("Skyplan!" + domainFile)
     } else {
-      println("A*")
+      println("A*" + problemFile)
     }
 
+    def average(seq: IndexedSeq[Double]) = {
+      if (seq.size > 0) {
+        if (seq.size <= 2) seq.sum / seq.size
+        else {
+          val newSeq = seq.sorted.drop(1).dropRight(1)
+          newSeq.sum / newSeq.size
+        }
+      } else 0.0
+    }
 
     try {
-      val maxRuns = 100
+      warmupHotspot()
+      val maxRuns = if (args.length >= 4) args(3).toInt else 20
       val instance = ProblemInstance.fromPDDL(domain, problem)
       var times = IndexedSeq.empty[Double]
       var nodes = IndexedSeq.empty[Double]
@@ -96,3 +129,4 @@ object HierarchicalSkyplan {
     }
   }
 }
+

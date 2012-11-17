@@ -59,9 +59,10 @@ class HierarchicalSkyplanTest  extends FunSuite {
     try {
 
       val instance = ProblemInstance.fromPDDL(domain, problem)
-      val plan = HierarchicalSkyplan.findPlan(instance)
+      val plan = HierarchicalSkyplan.findPlan(instance, true)
       assert(plan.nonEmpty,plan)
-      assert(plan.get._2._1 == 50.0)
+      println(plan.get._1)
+      assert(plan.get._2._1 === 50.0)
     } catch {
       case e =>
         e.printStackTrace()
