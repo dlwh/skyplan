@@ -263,15 +263,6 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
     if (cmp == NonComparable) return cmp
     if (shortCircuitOnDominates && cmp == Dominates) return cmp
 
-    for (a : Int <- first.axioms | second.axioms) {
-      val o = axiomOrders(a)
-      if (o != null) {
-        cmp = cmp combine o.orderAxiomTruth(first.axioms.contains(a), second.axioms.contains(a))
-        if (cmp == NonComparable) return cmp
-        if (shortCircuitOnDominates && cmp == Dominates) return cmp
-      }
-    }
-
     val visited = collection.mutable.BitSet.empty
     var i = 0
     while(i < first.resources.iterableSize) {

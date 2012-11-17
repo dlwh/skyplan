@@ -91,7 +91,7 @@ class HierarchicalAStarSearch[T, Action](treeSearch: Boolean = false, verbose: B
       }
 
       def fillOutHValues(cur: State, cost: Double) {
-        for(ss <- cur.states) {
+        for(ss <- cur.states.reverse.headOption) {
           heuristics(ss.level).getOrElseUpdate(ss.t, cost - ss.cost)
         }
       }

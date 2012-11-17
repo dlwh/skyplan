@@ -45,7 +45,6 @@ class StateSkyline(instance: ProblemInstance) extends Oracle[State] {
       i = candidates.nextSetBit(i+1)
     }
 
-
     actuallyAdd(t, cost)
     true
   }

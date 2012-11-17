@@ -152,7 +152,7 @@ class PartialOrderTest  extends FunSuite {
       val instance = ProblemInstance.fromPDDL(domain, problem)
       val init: State = instance.initialState
       val compare = init.copy
-      val (a, args) = init.possibleActions.iterator.next()
+      val Grounded(a, args, _) = init.possibleActions.iterator.next()
       val action = instance.actions.ground(a, args)
       compare.pendingActions.enqueue(action, 10)
 
