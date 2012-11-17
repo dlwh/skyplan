@@ -76,13 +76,22 @@ can be reached at the same time, we can safely discard the latter,
 \textit{dominated} state, instead focusing our search on the better
 state.
 
+These kinds of similar, but clearly suboptimal, states are particularly
+common in concurrent domains, where the planner must make decisions
+about whether or not to expend all resources now, or wait some
+amount of time for a currently running action to finish. Because
+of the sheer number of decisions to be made, many states
+end up falling irreparably behind their optimal variants.
+
 In this paper, we seek to formalize this notion, using Pareto
 dominance to prune states that are strictly dominated by some other
 state. More specifically, we give conditions under which we can
 expand only those states in the \textit{skyline}, that is, states
 that are not dominated by any another state. Our system, Skyplan,
 is a refinement of Uniform Cost Search or \Astar~\citep{astar} that
-expands only those states that are in the skyline.
+expands only those states that are in the skyline. Because, heuristics like
+those used in \Astar cannot compare two states to one another, Skyplan
+speeds up search in a way that is orthogonal to the traditional heuristics used in \Astar.
 
 The central idea underlying our approach is to define a partial
 order relationship between states in the search space. This partial
@@ -90,6 +99,7 @@ order has an intuitive interpretation: one state dominates another
 if it has no fewer ``good'' resources (e.g. job shop outputs) than
 another, no more ``bad'' resources (e.g. labor expended or time
 taken), and it is better in one or more ways. 
+
 
 In our analysis, we prove that our algorithm is both complete and
 optimal with a suitable partial order. Moreover, we prove that
@@ -109,7 +119,7 @@ In our experiments, we compare Skyplan to a similar implementation
 of $A^*$ in a job shop domain. In addition, we introduce a new
 domain, based on the popular video game StarCraft. Skyplan performs
 especially well in this latter domain, cutting the branching factor
-by as much as 99\% compared to \Astar, and run times by more
+by as much as XXX\% compared to \Astar, and run times by more
 than a factor of 10.
 
 \section{Skyplan}
@@ -206,7 +216,7 @@ optimal search algorithm like Uniform Cost Search or \Astar. For
 the sake of exposition, we focus on Uniform Cost Search, though
 \Astar or any optimal graph search algorithm can be modified in the
 same way.\footnote{In our experiments we use either \Astar or
-Hierarchical \Astar.~\citep{holte1996hierarchical}}
+Hierarchical \Astar~\citep{holte1996hierarchical}.}
 
 Skyplan is defined in Algorithm \ref{alg:skyplan}. Essentially, we
 run Uniform Cost Search as normal, except that we only expand states
@@ -221,29 +231,29 @@ not affecting optimality or completeness. Whether or not it is
 useful depends on the kinds of search operators being applied: if
 there are many similar successors to a state, this check can prune a very large
 number of states. However, if most actions are very different, it will
-likely have no effect.
+likely have limited effect.
 
 \begin{algorithm}
   \begin{algorithmic}[1]
     \Procedure{UCSSkyplan}{$s, G, F, \preceq$}
-    \State Initialize $Open=\{\langle s,0\rangle\}$, $Closed=\{\}$
-    \While{ $Open$ is not empty}
-    \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in Open$
-      \State $n\rightarrow Closed$
+    \State Initialize $\textit{Open}=\{\langle s,0\rangle\}$, $\textit{Closed}=\{\}$
+    \While{ \textit{Open} is not empty}
+    \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in \textit{Open}$
+    \State $n\rightarrow \textit{Closed}$
       \If {$n\in F$} 
         \State \Return the path to $n$ following back pointers
       \EndIf
-      \If {$\forall m \in Open \cup Closed. n^\prime \nprec m$}
+      \If {$\forall m \in \textit{Open} \cup \textit{Closed}. n^\prime \nprec m$}
         \For {$n^\prime\in\mathrm{succ}(n)$} 
         \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
-          \State $\mathbf{n^\prime} \rightarrow Open$
+        \State $\mathbf{n^\prime} \rightarrow \textit{Open}$
         \EndFor
       \EndIf
     \EndWhile
     \State fail
   \EndProcedure
   \end{algorithmic}
-\caption{An implementation of Skyplan based on uniform cost search.  }
+\caption{A version of Skyplan based on uniform cost search.  }
 \label{alg:skyplan}
 \end{algorithm}
 
@@ -256,17 +266,27 @@ likely have no effect.
   orders. The shaded area represents the goal region. Both $m$ and $n$ are reachable from the start state.
   Because $m$ is a better state than $n$, and $m$'s successors
   ``stay ahead'' of $n$'s, we can safely avoid expanding $n$ while
-  still preserving optimality}
+  still preserving optimality.}
   \label{fig:compatibility}
 \end{figure}
 
 Not just any partial order on states can be used to preserve optimality. As a perverse
-example, we can define a partial order under which all states on the optimal path
+example, we can define a partial order under which all states
+on an optimal path
 are dominated by non-optimal states. Thus, we need to define a property
-under which a partial order is \textit{compatible} with a search graph. While
-a broad class of partial orders might work, we have identified a particular 
-property that is especially applicable to planning problems:
+under which a partial order is \textit{compatible} with a search graph. 
+While a broad class of partial orders might work, we have identified
+a property that is especially applicable to planning problems.
+Figure \ref{fig:compatibility} illustrates 
+compatibility for a simple graph. If our goal is accumulate at
+least 18 widgets, then $n$ is clearly better than $m$ as
+it has more widgets in less time. Moreover, none
+of $m$'s successors reach a point better than all of $n$'s 
+successors. Because paths through $n$ continue to
+``stay ahead'' of those passing through $m$, we
+can safely prune $m$.
 
+We formalize this intuition as follows:
 \begin{definition}[Compatibility]
 	\label{def-compatibility}
   A partial order $\prec$ is \textit{compatible} if for all states $m \preceq n$,
@@ -287,14 +307,7 @@ a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
 states $m$ and $n$.
 
-Figure \ref{fig:compatibility} illustrates 
-compatibility for a simple graph. If our goal is accumulate at
-least 18 widgets, then $n$ is clearly better than $m$ as
-it has more widgets in less time. Moreover, none
-of $m$'s successors reach a point better than all of $n$'s 
-successors. Because paths through $n$ continue to
-``stay ahead'' of those passing through $m$, we
-can safely prune $m$.
+
 
 In planning problems, defining a compatible partial order is usually
 quite easy, so long as cost functions are additive.  Actions are
@@ -314,23 +327,23 @@ we prove a useful lemma.
 
 \begin{lemma}{}\label{clm-complete-lemma}
   Let $p$ be a path to a goal, let $m$ be one state in $p$, and let 
-$p_{n:}$ be the suffix of the path starting from $n$, and $|p|$
+$p_{m:}$ be the suffix of the path starting from $m$, and $|p|$
 be
-the length of a path in terms of the number of states. If $m$ is a state
-with $m \succeq n$, then there is a corresponding path $q$ that reaches a goal state
-through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $\mathrm{cost}(q) \leq \mathrm{cost}(p)$.
+the length of a path in terms of the number of states. If $n$ is a state
+with $n \succeq m$, then there is a corresponding path $q$ that reaches a goal state
+through $m$ with $|q_{m:}| \leq |p_{n:}|$ and $\mathrm{cost}(q) \leq \mathrm{cost}(p)$.
 \end{lemma}
 
 \begin{proof}
-$p_{m:}=(m,m_{1},\dots,m_{k})$ with $m_{k}$ a goal state.
-By condition (2) of compatibility, $\exists n_{1} \in \mathrm{succ}(n)$ 
-with $n_{1} \succeq m_{1}$ and $\mathrm{cost}(n,n_{1}) \leq \mathrm{cost}(m,m_{1})$. 
-Similarly, $\exists n_{2},\dots,n_{k}$ with 
-$n_{i} \succeq m_{i}$ and $n_{i+1} \in \mathrm{succ}(n_{i})$ with 
-total cost $\leq \mathrm{cost}(p_{m:})$.
-By condition (3) of compatibility, $n_{k} \in F$. By condition (1),
-there is a path from $s$ to $n$ with $g(n) \leq g(m)$. The above argument extends this path
-to the goal state $n_{k}$ and completes the proof of the lemma.
+$p_{n:}=(n,n_{1},\dots,n_{k})$ with $n_{k}$ a goal state.
+By condition (2) of compatibility, $\exists m_{1} \in \mathrm{succ}(m)$ 
+with $m_{1} \succeq n_{1}$ and $\mathrm{cost}(m,m_{1}) \leq \mathrm{cost}(n,n_{1})$. 
+Similarly, $\exists m_{2},\dots,m_{k}$ with 
+$m_{i} \succeq n_{i}$ and $m_{i+1} \in \mathrm{succ}(m_{i})$ with 
+total cost $\leq \mathrm{cost}(p_{n:})$.
+By condition (3) of compatibility, $m_{k} \in F$. By condition (1),
+there is a path from $s$ to $m$ with $g(m) \leq g(n)$. The above argument extends this path
+to the goal state $m_{k}$ and completes the proof of the lemma.
 \end{proof}
 
 This lemma states that if $m \preceq n$, then there is a path from $n$ to a goal
@@ -415,7 +428,7 @@ But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the
 Now that we have a definition of compatible partial orders and an
 algorithm that can take advantage of them, all we need is a method
 for finding them. Of course, one can construct them by hand using
-domain knowledge, but that is less than ideal. In this section, we
+domain knowledge, but that is not always desirable. In this section, we
 show how to automatically infer a compatible partial order from a
 sequential planning problem domain's specification, such as those
 available in PDDL~\citep{ghallab1998pddl,fox2003pddl2}. In the next
@@ -528,18 +541,7 @@ in mind, we can define the partial order $\po$:
 \end{proof}
 
 A few remarks are in order with regard to this inferred ordering.
-First, it may not be the best ordering for a given problem. Consider
-a domain in which we need can use sprockets to make a transmogrifier,
-but not widgets. However, suppose there is a free conversion from
-widgets to sprockets, and vice versa---because sprockets are in
-fact just upside-down widgets. In this case, sprockets and widgets
-are interchangeable, and so we can actually prune based on the sum
-of their count. However, the method just described is incapable of
-realizing this relationship. In general it is intractable to find
-the optimal partial ordering, but we suspect that such perverse
-examples as the one just described are rare.
-
-Second, there are occasionally resources that are usually beneficial,
+First, there are occasionally resources that are usually beneficial,
 but they might have some high upper limit. For instance, we might
 like to have as many widgets as possible, except that we have only
 a large but finite amount of storage space for them.  In this case,
@@ -550,6 +552,19 @@ search, we can treat it as though there was no limit. If we do in
 fact hit the limit, we then have to re-enqueue all nodes pruned
 based on widget count, and back off to the safer partial order.
 
+Second, it may not be the best ordering for a given problem. Consider
+a domain in which we need can use sprockets to make a transmogrifier,
+but not widgets. However, suppose there is a free conversion from
+widgets to sprockets, and vice versa---because sprockets are in
+fact just upside-down widgets. In this case, sprockets and widgets
+are interchangeable, and so we can actually prune based on the sum
+of their count. However, the method just described is incapable of
+realizing this relationship. In general it is intractable to find
+the optimal partial ordering, but we suspect that such perverse
+examples as the one just described are not the most common case.
+
+
+
 \section{Partial Orders and Concurrency} 
 
 In classical planning domains, constructing a search graph is
@@ -557,8 +572,7 @@ straightforward, with transitions corresponding directly to the
 simple actions available to the agent. However, in planning domains
 that permit multiple simultaneous actions, the state space and the
 search graph need to be augmented slightly for planning to still
-work properly as a search problem. In this work, we use a mild
-adaptation of the concurrent planning framework described in
+work properly as a search problem. In this work, we use the concurrent planning framework described in
 \citet{bacchus2001planning}.
 First, we briefly describe this representation, and then describe
 the extension of the partial order inference to concurrent domains.
@@ -658,7 +672,7 @@ Taken altogether, we once again get $m^\prime \poq n^\prime$.
 
 \section{Skyplan in Practice}
 
-Thus, the basic outline of our system is fairly straightforward.
+Stepping back, the basic outline of our system is fairly straightforward.
 Given a planning problem, Skyplan infers the partial order
 and we then use that partial order in a standard graph search.
 
@@ -708,7 +722,8 @@ in the current the skyline, and to check all of these elements when
 deciding whether or not to add an element to the skyline. Unfortunately,
 this check is clearly linear in the number of states (which means
 we must make quadratically many checks). In practice, this
-runtime can overwhelm the benefit obtained from pruning the branching factor.
+runtime can overwhelm the benefit obtained from pruning the branching factor,
+especially if the number of states pruned is small.
 
 However, note that in high dimensions most states are clearly not
 related to one another.  They might both have different positive
@@ -738,7 +753,7 @@ in practice it is several orders of magnitude faster.
 		& Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time \\
 		\hline
 		Hierarchical \Astar & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
-		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & 1,309,482 & 2814 \\
+		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & 1,309,482 & 2834 \\
 		\hline
 		\end{tabular}
 	\end{center}
@@ -750,12 +765,16 @@ We empirically evaluated Skyplan in two domains. First, we ran experiments on a 
 of standard job shop tasks from the woodworking domain. We chose this domain because it
 permits simultaneous actions, and Skyplan is particularly well-suited to domains where the
 extra freedom afforded by concurrency results in an explosion in the set of possible
-states. However, like most standard planning domains, this one is largely concerned with
-discrete objects rather than ever-growing resources, and so is still rather limited in the
+states. However, like most standard planning domains, the woodworking domain is largely concerned with
+discrete objects rather than ever-growing resources. Therefore, this domain is still rather limited in the
 amount of concurrency needed, with even the most complex problems never permitting more
-than a dozen simultaneous actions, and the simpler problems that were amenable to optimal
-planning not requiring more than two. Thus, we also ran experiments in a more realistic
-resource acquisition setting modeled on the video game StarCraft.
+than a dozen simultaneous actions. As we will show, Skyplan achieves modest improvements in this domain. 
+
+Skyplan performs best in domains with a large amount of concurrency, much more than is available in most
+standard planning domains. Therefore, we also ran experiments in a more realistic
+resource acquisition setting modeled on the video game StarCraft. Because this domain involves
+manipulating large numbers of resources at the same time, Skyplan's strengths will be more
+readily apparent.
 
 \subsection{The Woodworking Domain}
 
@@ -776,7 +795,7 @@ still retains anywhere from a 15\% to a 35\% speed advantage on the first four p
 \subsection{The StarCraft Domain}
 
 StarCraft$^\textrm{\textregistered}$ is a real time strategy game
-created by Blizzard Entertainment, and one of the most competitive
+created by Blizzard Entertainment, and it is one of the most competitive
 and popular games in the world. The game involves the accumulation
 of resources (minerals and gas), which are gathered by workers.
 These resources are then spent to build structures (e.g.\ a barracks),
@@ -828,7 +847,7 @@ of this specification upon publication.}
 Planning in highly concurrent domains can be particularly challenging for standard
 search-based planners, but by restricting attention to only those states that could
 conceivably be part of an optimal plan, Skyplan can efficiently solve problems that
-previously could only be tackled by satisficing approaches. Furthermore, since
+\Astar alone could not solve. Furthermore, since
 geometrically pruning the state space achieves speedups in a way that is orthogonal to
 heuristic domain knowledge, this gain should stack well with improved A* approaches. There
 is overhead introduced by the optimality-preserving skyline, but further innovations in
