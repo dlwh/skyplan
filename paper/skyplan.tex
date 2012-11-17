@@ -343,14 +343,36 @@ there is some path $p^\prime$ that is not pruned with $cost(p^\prime) \leq cost(
 Thus, $p^\prime$ is optimal as well.
 \end{proof}
 
+By leveraging the information contained in the partial order, Skyplan is able to achieve
+optimal plans while expanding fewer states in general.  But is Skyplan using this added
+information in the best possible manner? It is easy to see that any state expanded by 
+Skyplan must not be dominated by any other state in the graph: otherwise $Closed$ would
+contain such a dominating state when the about-to-be-expanded state was popped, pruning it.  This turns out to be enough to prove the following:
 
-
-\begin{comment}
 \begin{claim}{}\label{clm-optimally-efficient}
 For any compatible partial order $\prec$, Skyplan is \emph{optimally efficient}.
 \end{claim}
-\begin{proof} XXX \end{proof}
-\end{comment}
+\begin{proof} 
+(We prove the claim on the set of graphs for which all paths have unique costs: $n \neq m \implies g(n) \neq g(m)$.)
+
+Suppose otherwise; there must exist an optimal algorithm B and a search problem $(G,\preceq)$ 
+on which B expands (calls the successor function on) strictly fewer states than Skyplan. 
+Let $n^{*}$ be a state expanded in Skyplan but not by B on the problem $(G,\preceq)$, and let
+$f_{B}$ be the goal state returned by B. We construct a new graph $G^\prime$ by adding a single goal state $f^*$ to $G$ 
+and an associated edge from $n^*$ to $f^*$ of cost $\epsilon$ (with $\epsilon < g(f^*)-g(n^*)$). 
+On $G^\prime$ we apply the original partial order $\preceq$ with $n \npreceq m$ if either $n$ or $m$ is $f^*$.
+
+We must show that $\preceq$ is compatible on $G^\prime$. 
+Let $m,n \in G^\prime$ such that $n \preceq m$. Then neither $m$ or $n$ is $f^*$. Conditions (1) and (3) %\ref
+are clearly true in $G^\prime$ because they are true in $G$.  Furthermore, if $n \neq n^*$ condition (2) is true 
+because $succ_{G^\prime}(n) = succ_{G}(n)$. 
+But as we observed above, no state expanded in Skyplan is dominated by any other state $\implies n \neq n^*$.
+
+Except for the fact that $n^*$ has an extra successor, $G^\prime$ is otherwise
+ identical to $G$. By assumption, B never examined the successors of $n^*$, and 
+must therefore follow the same execution path on the graph $G^\prime$, returning the goal state $f_B$.
+But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the optimality of B.
+ \end{proof}
 
 \section{Inferring Partial Orders}
 
