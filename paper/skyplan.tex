@@ -413,7 +413,7 @@ But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the
 \newcommand{\po}{\preceq_R}
 
 Now that we have a definition of compatible partial orders and an
-algorithm that can take advatage of them, all we need is a method
+algorithm that can take advantage of them, all we need is a method
 for finding them. Of course, one can construct them by hand using
 domain knowledge, but that is less than ideal. In this section, we
 show how to automatically infer a compatible partial order from a
@@ -422,15 +422,27 @@ available in PDDL.~\citep{ghallab1998pddl,fox2003pddl2} In the next
 section, we will extend this procedure to a broad class of concurrent
 domains with durative actions.
 
+\subsection{Planning States}
+
 When planning with resources, a basic planning state $n$ can be viewed as a mapping from
 resource types to values. That is, for a given resource $r$, $n(r) \in \R$ is the quantity
-of that resource available at state $n$. Most planning state representations also
-require some notion of boolean propositions, but in order to simplify the exposition, for the
+of that resource available at state $n$. Most planning state representations also require
+some notion of boolean propositions, but in order to simplify the exposition, for the
 purposes of defining a partial order we view these as special resources that always take
 values in \{0, 1\}.
 
-If we want to determine whether a state $\mathbf{n}$ dominates $\mathbf{m}$, then we need
-to know two things: first, does $\mathbf{n}$ have lower cost; and second, does $\mathbf{n}$
+Also note that for planning problems, the \emph{cost} of a state is
+just a resource like any other. For example, in many domains, the cost is equivalent to
+time, which most actions increment as one of their effects. Thus, though we have been so
+far using $g(n)$ to refer to the cost of the \emph{optimal} path to a state, in this
+section we will abuse notation slightly and treat $g(n)$ as an observable property of the
+state itself, with the understanding that a path with a different cost would have reached a
+different state.
+
+\subsection{Basic Partial Orders}
+
+If we want to determine whether a state $n$ dominates $m$, then we need
+to know two things: first, does $n$ have lower cost; and second, does $n$
 have a more ``useful'' set of resources? The first criterion is easy to check, but the
 second requires some notion of what it means for a resource to be useful or not.
 
@@ -485,9 +497,9 @@ have no effect on any condition in the problem. Finally, we can define the parti
 
 \begin{definition}[$\po$]
 	\label{def-po}
-	For planning states $\mathbf{n} = (n, c)$ and $\mathbf{m} = (m, d)$, we say that $\mathbf{n} \po \mathbf{m}$ if and only if:
+	For planning states $n$ and $m$, we say that $n \po m$ if and only if:
 	\begin{enumerate}
-		\item $c \ge d$,
+		\item $g(n) \ge g(m)$,
 		\item $\forall r \in R^+, n(r) \le m(r)$,
 		\item $\forall r \in R^-, n(r) \ge m(r)$, and
 		\item $\forall r \in R^=, n(r) = m(r)$
@@ -506,7 +518,7 @@ have no effect on any condition in the problem. Finally, we can define the parti
 	
 	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n^\prime$. By the argument above, if the precondition of this action holds for $n$, then it also holds for $m$. Let
   $m^\prime$ be the result of taking this action from $m$. By assumption, the cost is identical, and also by assumption, the change in resources from $m$ to $m^\prime$ is identical to that from $n$ to $n^\prime$, which implies that $\forall r, m^\prime(r) -
-  n^\prime(r) = m(r) - n(r)$. Therefore, $\mathbf{n^\prime} \po \mathbf{m^\prime}$.
+  n^\prime(r) = m(r) - n(r)$. Therefore, $n^\prime \po m^\prime$.
 \end{proof}
 
 A few remarks are in order with regard to this inferred ordering.
@@ -595,7 +607,7 @@ intuition as follows:
 
 \begin{definition}[$\poq$]
 	\label{def-poq}
-	Let $q(n)$ denote the action queue for state $n$. For planning states $\textbf{n} = (n, c)$ and $\textbf{m} = (m, d)$, we say that $\textbf{n} \poq \textbf{m}$ if and only if $\textbf{n} \po \textbf{m}$, and $\forall (a, t) \in q(n)$, at least one of the following conditions holds:
+	Let $q(n)$ denote the action queue for state $n$. For planning states $n$ and $m$, we say that $n \poq m$ if and only if $n \po m$, and $\forall (a, t) \in q(n)$, at least one of the following conditions holds:
 	\begin{enumerate}
 		\item $\exists$ a distinct $ (a, t^\prime) \in q(m)$ with $t^\prime \le t$.
 		\item $\forall r $ affected by the completion effects of $
@@ -616,10 +628,10 @@ The notion of a \emph{distinct} pair $(a, t^\prime)$ is important, as the same a
 Definition~\ref{def-compatibility}. There are two types of transitions we need to handle
 for condition 2: basic action transitions, and $\mathrm{elapse\_time}$ transitions. Basic
 actions are also mostly covered by the proof of Claim~\ref{clm-po-compatible}; the only
-difference is that the action queues are modified. $q(n)$ and
-$q(n^\prime)$ differ only in the addition of $(a, d_a)$, and likewise for $q(m)$ and $q(m^\prime)$. Since we
-already know that Condition 2 of Definition~\ref{def-poq} is met by $n$ and $m$, this
-means that it is also met by $n^\prime$ and $m^\prime$, so $\textbf{n}^\prime \poq \textbf{m}^\prime$.
+difference is that the action queues are modified. $q(n)$ and $q(n^\prime)$ differ only in
+the addition of $(a, d_a)$, and likewise for $q(m)$ and $q(m^\prime)$. This new addition is
+covered by the first case in Definition~\ref{def-poq}, and $n \poq m$ implies that the rest
+of $q(n^\prime)$ is matched by $m^\prime$, so we also have $n^\prime \poq m^\prime$.
 
 	All that remains is the $\mathrm{elapse\_time}$ transitions. Assume that $n^\prime$ is
 reached by following $\mathrm{elapse\_time}(k)$ from $n$. If we follow $\mathrm{elapse\_time}(k)$ from $m$, we incur the same cost and $m^\prime$ has the following two properties. First, for every pair $(a, t) \in q(n)$ with $t \le k$ that is completed as part of the transition, either:
@@ -633,7 +645,7 @@ Second, for every pair $(a, t) \in q(n)$ with $t > k$ there is now a pair $(a, t
 	\item $\exists (a, t^\prime) \in q(m)$ with $k < t^\prime \le t$, so $(a, t^\prime-k)$ is in $q(m^\prime)$, or
 	\item $\exists (a, t^\prime) \in q(m)$ with $t^\prime \le k \le t$, so $m^\prime$ has gained the necessary resource advantage over $n^\prime$.
 \end{enumerate}
-Taken altogether, this means we still have $\textbf{n} \poq \textbf{m}$.
+Taken altogether, we once again get $n^\prime \poq m^\prime$.
 
 \end{proof}
 
