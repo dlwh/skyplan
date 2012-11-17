@@ -71,8 +71,8 @@ ways. One important distinction is that there are typically many
 planning states that are ``similar'' along one or more dimensions.
 For instance, in a job shop scheduling domain, one search state
 might have the same number of widgets---but fewer sprockets---than
-another. Assuming that more is always better and that the two states
-can be reached in the same time, we can safely discard the latter,
+another. Assuming in this example that more is always better and that the two states
+can be reached at the same time, we can safely discard the latter,
 \textit{dominated} state, instead focusing our search on the better
 state.
 
@@ -117,8 +117,7 @@ than a factor of 10.
 
 We operate in the standard convention of planning with additive
 costs as search within a weighted directed graph.  A planning problem
-consists of a directed graph $G$ with states $n$ representing
-partial plans. States are linked by directed edges with an associated
+consists of a directed graph $G$ with planning states $n$. States are linked by directed edges with an associated
 cost function $\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.  There is
 also a privileged initial state $s$, along with a set of goal states
 $F$.  Further define $g(n)$ to be the minimum cost path from $s$
@@ -155,7 +154,7 @@ two resources, widgets and sprockets. If having more widgets and
 more sprockets is alway better, than all states that are not at one
 of the corners of the skyline are strictly dominated by one or more
 of the states that are.  Thus, if all states have the same cost,
-we can safely remove states from search.
+we can safely remove the dominated states (represented by X's) from search.
 
 Our goal is to define an optimal search algorithm that can exploit
 this partial order to reduce the search space by only expanding
@@ -202,7 +201,7 @@ unlike expansion cores in our system.
 
 \subsection{Algorithm}
 
-Skyplan is a fairly straightforward modification of a standard
+Skyplan is a fairly easy modification of a standard
 optimal search algorithm like Uniform Cost Search or \Astar. For
 the sake of exposition, we focus on Uniform Cost Search, though
 \Astar or any optimal graph search algorithm can be modified in the
