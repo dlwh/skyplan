@@ -817,6 +817,16 @@ of this specification upon publication.}
 
 \section{Conclusion}
 
+Planning in highly concurrent domains can be particularly challenging for standard
+search-based planners, but by restricting attention to only those states that could
+conceivably be part of an optimal plan, Skyplan can efficiently solve problems that
+previously could only be tackled by satisficing approaches. Furthermore, since
+geometrically pruning the state space achieves speedups in a way that is orthogonal to
+heuristic domain knowledge, this gain should stack well with improved A* approaches. There
+is overhead introduced by the optimality-preserving skyline, but further innovations in
+data structures for state space pruning could obviate this problem, perhaps trading
+guaranteed optimality for improvements in asymptotic complexity.
+
 \bibliographystyle{aaai}
 \bibliography{refs}
 
