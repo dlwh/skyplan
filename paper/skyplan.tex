@@ -499,12 +499,12 @@ in mind, we can define the partial order $\po$:
 
 \begin{definition}[$\po$]
 	\label{def-po}
-	For planning states $n$ and $m$, we say that $n \po m$ if and only if:
+	For planning states $n$ and $m$, we say that $m \po n$ if and only if:
 	\begin{enumerate}
-		\item $g(n) \ge g(m)$,
-		\item $\forall r \in R^+, n(r) \le m(r)$,
-		\item $\forall r \in R^-, n(r) \ge m(r)$, and
-		\item $\forall r \in R^=, n(r) = m(r)$
+		\item $g(m) \ge g(n)$,
+		\item $\forall r \in R^+, m(r) \le n(r)$,
+		\item $\forall r \in R^-, m(r) \ge n(r)$, and
+		\item $\forall r \in R^=, m(r) = n(r)$
 	\end{enumerate}
 \end{definition}
 
@@ -516,14 +516,16 @@ in mind, we can define the partial order $\po$:
 	
 	To verify condition 3 of Definition~\ref{def-compatibility},
   we only need to consider resources $r$ for which the goal
-  test is $r$-dependents, as changes in other resources will not affect the outcome of the test. If the goal test is $r$-positive, then $r \in R^+$ or $r \in R^=$, so $n(r) \le m(r)$. If the goal test is $r$-negative, then $r \in R^-$ or $r \in R^=$, so $n(r) \ge m(r)$. If the goal test is neither (but is $r$-dependent), then $r \in R^=$, so $n(r) = m(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
+  test is $r$-dependents, as changes in other resources will
+  not affect the outcome of the test. If the goal test is
+  $r$-positive, then $r \in R^+$ or $r \in R^=$, so $m(r) \le n(r)$. If the goal test is $r$-negative, then $r \in R^-$ or $r \in R^=$, so $m(r) \ge n(r)$. If the goal test is neither (but is $r$-dependent), then $r \in R^=$, so $m(r) = n(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
 	
-	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n^\prime$. By the argument above, if the precondition of this action holds for $n$, then it also holds for $m$. Let
-  $m^\prime$ be the result of taking this action from $m$. By
+	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n^\prime$. By the argument above, if the precondition of this action holds for $m$, then it also holds for $n$. Let
+  $n^\prime$ be the result of taking this action from $n$. By
   assumption, the cost is identical and the change in resources
-  from $m$ to $m^\prime$ is also identical to that from $n$ to
-  $n^\prime$. Thus, for all $r, m^\prime(r) -
-  n^\prime(r) = m(r) - n(r)$. Therefore, $n^\prime \po m^\prime$.
+  from $n$ to $n^\prime$ is also identical to that from $m$ to
+  $m^\prime$. Thus, for all $r, n^\prime(r) -
+  m^\prime(r) = n(r) - m(r)$. Therefore, $m^\prime \po n^\prime$.
 \end{proof}
 
 A few remarks are in order with regard to this inferred ordering.
@@ -604,26 +606,26 @@ domains we consider in this work.} Formally, this means that any resource whose 
 increased at completion is in $R^+$ or $R^\emptyset$, and any resource whose value is decreased is in
 $R^-$ or $R^\emptyset$. The extension to more general action effects is straightforward.
 
-Intuitively, a state $m$ can only be better than a state $n$ if
-its action queue finishes faster than $n$'s, or if $m$ already
+Intuitively, a state $n$ can only be better than a state $m$ if
+its action queue finishes faster than $m$'s, or if $n$ already
 has more resources than $n$ will have. We formalize this
 intuition as follows:
 
 \begin{definition}[$\poq$]
 	\label{def-poq}
-	Let $q(n)$ denote the action queue for state $n$. For
-  planning states $n$ and $m$, we say that $n \poq m$ if and
-  only if $n \po m$, and also $\forall (a, t) \in q(n)$, at least one of the following conditions holds:
+	Let $q(m)$ denote the action queue for state $m$. For
+  planning states $m$ and $n$, we say that $m \poq n$ if and
+  only if $m \po n$, and also $\forall (a, t) \in q(m)$, at least one of the following conditions holds:
 	\begin{enumerate}
-		\item $\exists$ a distinct $ (a, t^\prime) \in q(m)$ with $t^\prime \le t$.
+		\item $\exists$ a distinct $ (a, t^\prime) \in q(n)$ with $t^\prime \le t$.
 		\item $\forall r $ affected by the completion effects of $
-      a$, the change from $n(r)$ to $m(r)$ is at least as big
+      a$, the change from $m(r)$ to $n(r)$ is at least as big
       as that produced by all actions currently enqueued that
       are not satisfied by condition 1.
 	\end{enumerate}
 \end{definition}
-The notion of a \emph{distinct} pair $(a, t^\prime)$ is important, as the same action can appear multiple times in the same action queue. For example, let $a$ be an action whose completion effect is ``Gain 5 $r$''. If $q(n) = \{(a, 10), (a, 20)\}$ then $q(m) = \{(a, 10),
-(a, 15)\}$ meets this condition, but $q(m) = \{(a, 5)\}$ does not, unless $m(r) \ge n(r) + 5$. Similarly, $q(m) = \{\}$ does not meet the condition unless $m(r) \ge n(r) + 10$.
+The notion of a \emph{distinct} pair $(a, t^\prime)$ is important, as the same action can appear multiple times in the same action queue. For example, let $a$ be an action whose completion effect is ``Gain 5 $r$''. If $q(m) = \{(a, 10), (a, 20)\}$ then $q(n) = \{(a, 10),
+(a, 15)\}$ meets this condition, but $q(n) = \{(a, 5)\}$ does not, unless $n(r) \ge m(r) + 5$. Similarly, $q(n) = \{\}$ does not meet the condition unless $n(r) \ge m(r) + 10$.
 
 \begin{claim}{}{\label{clm-poq-compatible}}
 	If action costs and effects do not depend on the state, and all action completion effects are beneficial, then $\poq$ is compatible.
@@ -634,24 +636,24 @@ The notion of a \emph{distinct} pair $(a, t^\prime)$ is important, as the same a
 Definition~\ref{def-compatibility}. There are two types of transitions we need to handle
 for condition 2: basic action transitions, and $\mathrm{elapse\_time}$ transitions. Basic
 actions are also mostly covered by the proof of Claim~\ref{clm-po-compatible}; the only
-difference is that the action queues are modified. $q(n)$ and $q(n^\prime)$ differ only in
-the addition of $(a, d_a)$, and likewise for $q(m)$ and $q(m^\prime)$. This new addition is
-covered by the first case in Definition~\ref{def-poq}, and $n \poq m$ implies that the rest
-of $q(n^\prime)$ is matched by $m^\prime$, so we also have $n^\prime \poq m^\prime$.
+difference is that the action queues are modified. $q(m)$ and $q(m^\prime)$ differ only in
+the addition of $(a, d_a)$, and likewise for $q(n)$ and $q(n^\prime)$. This new addition is
+covered by the first case in Definition~\ref{def-poq}, and $m \poq n$ implies that the rest
+of $q(m^\prime)$ is matched by $n^\prime$, so we also have $m^\prime \poq n^\prime$.
 
-	All that remains is the $\mathrm{elapse\_time}$ transitions. Assume that $n^\prime$ is
-reached by following $\mathrm{elapse\_time}(k)$ from $n$. If we follow $\mathrm{elapse\_time}(k)$ from $m$, we incur the same cost and $m^\prime$ has the following two properties. First, for every pair $(a, t) \in q(n)$ with $t \le k$ that is completed as part of the transition, either:
+	All that remains is the $\mathrm{elapse\_time}$ transitions. Assume that $m^\prime$ is
+reached by following $\mathrm{elapse\_time}(k)$ from $m$. If we follow $\mathrm{elapse\_time}(k)$ from $n$, we incur the same cost and $n^\prime$ has the following two properties. First, for every pair $(a, t) \in q(m)$ with $t \le k$ that is completed as part of the transition, either:
 \begin{enumerate}
-	\item $m$ already had a corresponding resource advantage over $n$ and thus $n^\prime$ does not overtake $m^\prime$, or
-	\item $\exists (a, t^\prime) \in q(m)$ with $t^\prime \le t \le k$, and so this action completes and $m^\prime$ gets a corresponding resource improvement.
+	\item $n$ already had a corresponding resource advantage over $n$ and thus $m^\prime$ does not overtake $n^\prime$, or
+	\item $\exists (a, t^\prime) \in q(n)$ with $t^\prime \le t \le k$, and so this action completes and $n^\prime$ gets a corresponding resource improvement.
 \end{enumerate}
 Second, for every pair $(a, t) \in q(n)$ with $t > k$ there is now a pair $(a, t-k)$ in $q(n^\prime)$. But in $m^\prime$, one of three conditions holds:
 \begin{enumerate}
-	\item $m$ already had a corresponding resource advantage over $n$, so $m^\prime$ preserves this advantage over $n^\prime$, or
-	\item $\exists (a, t^\prime) \in q(m)$ with $k < t^\prime \le t$, so $(a, t^\prime-k)$ is in $q(m^\prime)$, or
-	\item $\exists (a, t^\prime) \in q(m)$ with $t^\prime \le k \le t$, so $m^\prime$ has gained the necessary resource advantage over $n^\prime$.
+	\item $n$ already had a corresponding resource advantage over $m$, so $n^\prime$ preserves this advantage over $m^\prime$, or
+	\item $\exists (a, t^\prime) \in q(n)$ with $k < t^\prime \le t$, so $(a, t^\prime-k)$ is in $q(n^\prime)$, or
+	\item $\exists (a, t^\prime) \in q(n)$ with $t^\prime \le k \le t$, so $n^\prime$ has gained the necessary resource advantage over $m^\prime$.
 \end{enumerate}
-Taken altogether, we once again get $n^\prime \poq m^\prime$.
+Taken altogether, we once again get $m^\prime \poq n^\prime$.
 
 \end{proof}
 
