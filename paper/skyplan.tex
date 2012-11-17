@@ -711,7 +711,7 @@ in practice it is several orders of magnitude faster.
 \section{Experiments}
 
 We empirically evaluated Skyplan in two domains. First, we ran experiments on a collection
-of standard sawing tasks from the woodworking domain. We chose this domain because it
+of standard job shop tasks from the woodworking domain. We chose this domain because it
 permits simultaneous actions, and Skyplan is particularly well-suited to domains where the
 extra freedom afforded by concurrency results in an explosion in the set of possible
 states. However, like most standard planning domains, this one is largely concerned with
@@ -723,10 +723,11 @@ resource acquisition setting modeled on the video game StarCraft.
 
 \subsection{The Woodworking Domain}
 
-We used the woodworking problems released with 2008 International Planning Competition XXX~\cite{IPC2008}.
+We used the woodworking problems released with 2008
+International Planning Competition.
 Though the later problems are fairly challenging and require satisficing solutions,
 the earlier problems are simple enough to be solved by basic optimal planners. We compare
-Skyplan to basic Hierarchical A* on the first 5 problems from this domain. We measured
+Skyplan to basic Hierarchical \Astar on the first 5 problems from this domain. We measured
 the number of nodes popped (including those popped during the recursive searches used
 for heuristic computation) and the total time taken by each algorithm.\footnote{All
 these experiments were run on isolated 2.67GHz Intel Xeon processors.} The results are
@@ -739,7 +740,7 @@ shown in Table~\ref{tab:woodworking}.
 		\multirow{2}{*}{Planner} & \multicolumn{2}{c|}{Problem 1}  & \multicolumn{2}{c|}{Problem 2} & \multicolumn{2}{c|}{Problem 3} & \multicolumn{2}{c|}{Problem 4} & \multicolumn{2}{c|}{Problem 5} \\
 		& Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time \\
 		\hline
-		Hierarchical A* & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
+		Hierarchical \Astar & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
 		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & & \\
 		\hline
 		\end{tabular}
@@ -748,8 +749,8 @@ shown in Table~\ref{tab:woodworking}.
 	\caption{Results on the woodworking domain. Times are in seconds, and are averaged over 20 runs for problems 1, 2, and 3; over 10 runs for problem 4; and over 5 runs for problem 5.}
 \end{table*}
 
-Skyplan is consistently faster than Hierarchical A*, typically pruning almost 50\% of the
-nodes that HA* expands. Maintaining the skyline does impose some overhead cost, but Skyplan
+Skyplan is consistently faster than Hierarchical \Astar, typically pruning almost 50\% of the
+nodes that H\Astar expands. Maintaining the skyline does impose some overhead cost, but Skyplan
 still retains anywhere from a 15\% to a 35\% speed advantage.
 
 \subsection{The StarCraft Domain}
@@ -770,13 +771,13 @@ planning against an adversary, highly concurrent plans, and online
 planning.  Indeed, \citet{churchill11build} recently described an
 online planning system designed for use in an artificial intelligence
 agent, and \citet{chan07online} earlier developed an online planner
-for a similar open source game.
+for a similar open source game called Wargus.
 
 Here, we focus instead on planning opening build orders. Much like
 Chess, there are a large number of different openings, some of which
 are known to be better than others. In StarCraft, openings can be
 either more aggressive or more ``economic'' (i.e.\ aimed at producing
-lots of resources), and typically want to get a specific composition
+lots of resources), and typically are designed to get a specific composition
 of buildings and units as quickly as possible.  In practice, the
 first several minutes of the game are played largely independent
 of what the opponent is doing, unless certain surprise ``cheese''
@@ -785,20 +786,22 @@ be the difference between an easy early win and a loss. Thus, coming
 up with an optimal build order for a given composition is useful,
 if it is feasible.
 
-One crucial aspect of Starcraft is that workers are both the resource gatherers
+One crucial aspect of StarCraft is that workers are both the resource gatherers
 and the builders of buildings. Combined with StarCraft being a ``real time'' game, 
 this property results in an extremely high branching factor in the game tree. However,
-many of the possible combinations are bad ideas: it is usually (but not always) a bad idea
+many of the possible combinations are clearly not optimal: it is usually (but not always) a bad idea
 to have your workers remain idle. This aspect of the game results in a large number of highly similar
 states, most of which are worse than others.
 
-XXX maybe some stuff about how we modeled the domain.
-
-We chose XXX
-
-\begin{figure}
-  \caption{states pruned table?}
-\end{figure}
+Our specification of StarCraft differs from that of
+\citet{churchill11build} precisely in how we handle gathering
+resources. For simplicity, they assume a linearization of resource
+gathering, with resources gathered at a continuous rate. However,
+resources are actually gathered in discrete amounts. By more
+accurately modeling resource collection, we can find more
+accurate plans, particularly in the early game, where seconds
+are so critical.\footnote{We will release a PDDL version
+of this specification upon publication.}
 
 \section{Conclusion}
 
