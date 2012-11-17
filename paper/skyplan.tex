@@ -50,8 +50,8 @@
 \begin{quote}
   When planning problems have many kinds of resources or high
   concurrency, each optimal state has exponentially many minor
-  variants, some of which are "better" than others. Standard methods
-  like A* cannot effectively exploit these minor relative differences,
+  variants, some of which are ``better" than others. Standard methods
+  like \Astar cannot effectively exploit these minor relative differences,
   and therefore must explore many redundant, clearly suboptimal
   plans. We describe a new optimal search algorithm for planning
   that leverages a partial order relation between states. Under
@@ -72,27 +72,33 @@ planning states that are ``similar'' along one or more dimensions.
 For instance, in a job shop scheduling domain, one search state
 might have the same number of widgets---but fewer sprockets---than
 another. Assuming that more is always better and that the two states
-can be reached in the same time, we can safely discard the former,
-\textit{dominated} states, instead focusing our search on the better
+can be reached in the same time, we can safely discard the latter,
+\textit{dominated} state, instead focusing our search on the better
 state.
 
 In this paper, we seek to formalize this notion, using Pareto
 dominance to prune states that are strictly dominated by some other
-states. More specifically, we give conditions under which we can
+state. More specifically, we give conditions under which we can
 expand only those states in the \textit{skyline}, that is, states
 that are not dominated by any another state. Our system, Skyplan,
-is a refinement of Uniform Cost Search or \Astar that expands only
-those states that are on the skyline.
+is a refinement of Uniform Cost Search or \Astar~\citep{astar} that
+expands only those states that are in the skyline.
 
 The central idea underlying our approach is to define a partial
 order relationship between states in the search space. This partial
 order has an intuitive interpretation: one state dominates another
-if it has no fewer ``good'' resources (e.g. jobshop outputs) than
+if it has no fewer ``good'' resources (e.g. job shop outputs) than
 another, no more ``bad'' resources (e.g. labor expended or time
 taken), and it is better in one or more ways. 
 
+In our analysis, we prove that our algorithm is both complete and
+optimal with a suitable partial order. Moreover, we prove that
+Skyplan is optimally efficient in the same sense as \Astar. That
+is, given a fixed partial order, there is no complete and optimal
+algorithm that can expand fewer search nodes.
+
 In addition to proving the correctness of our approach, we also
-show how to automatically infer such a partial order from a problem
+show how to automatically infer a compatible partial order from a problem
 specification such as PDDL~\citep{ghallab1998pddl,fox2003pddl2}.
 This procedure is fairly intuitive: one simply needs to determine
 which resources or propositions are uniformly good or bad, and---for 
@@ -100,15 +106,24 @@ domains with durative actions---which actions have uniformly
 good or bad final effects.
 
 In our experiments, we compare Skyplan to a similar implementation
-of $A^*$ on several (XXX) job shop domains. In addition, we introduce
-two new domains, based on the popular video game StarCraft. (XXX
-we should credit evo chamber for one of them.) Skyplan performs
-especially well in these scenarios, cutting the branching factor
-by as much as 99\% compared to \Astar.  Furthermore, we compare our
-algorithm to a heuristic open source planner specifically engineered
-to one of the two StarCraft domains.
+of $A^*$ in a job shop domain. In addition, we introduce a new
+domain, based on the popular video game StarCraft. Skyplan performs
+especially well in this latter domain, cutting the branching factor
+by as much as 99\% compared to \Astar, and run times by over XXX.
 
 \section{Skyplan}
+
+
+We operate in the standard convention of planning with additive
+costs as search within a weighted directed graph.  A planning problem
+consists of a directed graph $G$ with states $n$ representing
+partial plans. States are linked by directed edges with an associated
+cost function $\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.  There is
+also a privileged initial state $s$, along with a set of goal states
+$F$.  Further define $g(n)$ to be the minimum cost path from $s$
+to a state $n$.  Our goal is to find a path from $s$ to some state
+$n_f \in F$ with the lowest $g$ cost.
+
 
 \begin{figure}
 	\begin{center}
@@ -116,87 +131,86 @@ to one of the two StarCraft domains.
 \end{center}
   \caption{An example set of states in a two-resource planning domain. If
 all pictured states have the same cost, then only those shown as circles are
-worth exploring; the xes can be safely pruned.}
+worth exploring; the X's can be safely pruned.}
+  \label{fig:skyline}
 \end{figure}
-
-We operate in the standard convention of planning with additive
-costs as search within a weighted directed graph.  A planning problem
-consists of a directed graph $G$ with states $n$ consisting of
-planning states.  States are linked by directed edges with an
-associated a cost function $\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.
-There is also a privileged initial state $s$, along with a set of
-goal states $F$.  Further define $g(n)$ to be the minimum cost path
-from $s$ to any state $n$.  Our goal is to find a path from $s$ to
-some state $n_g \in F$ with the lowest $g$ cost.
 
 
 \subsection{Partial Orders}
 
-We will further assume that our graph is endowed with a partial order $\preceq$
-that relates states $n$ to one another, with the intuitive semantics that
-$n \preceq m$ if $n$ is no better than $m$ in any way. For example, in
-our sprockets and widgets example, $n \preceq m$ if $n$ has no more widgets and
-no more sprockets than $m$ and if $g(n) \ge g(m)$. Strict dominance $n \prec m$
-holds if $m$ is in addition strictly better than $n$ in some way.
+We will further assume that our graph is endowed with a partial
+order $\preceq$ that relates states $n$ to one another, with the
+intuitive semantics that $n \preceq m$ if $n$ is no better than $m$
+in any way. For example, in our sprockets and widgets example, $n
+\preceq m$ if $n$ has no more widgets and no more sprockets than
+$m$ and if $g(n) \ge g(m)$. Strict dominance $n \prec m$ holds if
+$m$ is in addition strictly better than $n$ in some way.  For any
+set of states $N$, we define the skyline of that set as
+$\textrm{skyline}(N)=\{n: \not\exists n^\prime \in N: n \prec
+n^\prime\}$. 
+
+For example, in Figure \ref{fig:skyline}, we consider a domain with
+two resources, widgets and sprockets. If having more widgets and
+more sprockets is alway better, than all states that are not at one
+of the corners of the skyline are strictly dominated by one or more
+of the states that are.  Thus, if all states have the same cost,
+we can safely remove those states from search.
 
 Our goal is to define an optimal search algorithm that can exploit
 this partial order to reduce the search space by only expanding
-states $n$ that are \textit{weakly Pareto optimal}, that is states
-$n$ with $n \nprec n^\prime$ for all states $n^\prime$. For any set
-of states $N$, the \textit{skyline} of that set as
-$\textrm{skyline}(N)=\{n: \not\exists n^\prime \in N: n \prec
-n^\prime\}$. That is, the skyline of a set is those states which
-are weakly Pareto optimal.  In subsequent sections, we will give a
-useful sufficient condition under which we can exploit a partial
-order while preserving correctness of optimal graph search algorithms.
+states $n$ that are \textit{weakly Pareto optimal}. That is, we
+wish to only expand those states that are on the skyline. In the
+next section, we will define this algorithm, and in the subsequent
+sections, we will give a useful sufficient condition under which
+we can exploit a partial order while preserving correctness of
+optimal graph search algorithms.
 
 We are not the first to suggest the use of Pareto optimality or
 skyline queries in the context of planning. For example, the
-non-optimal Metric-FF planner~\citep{hoffmann2003metric} employed a
-more limited notion of dominance, requiring that all propositions
+non-optimal Metric-FF planner~\citep{hoffmann2003metric} employed
+a more limited notion of dominance, requiring that all propositions
 be the same between two states, the domain to be monotonically
 ``good'' in all resources, and for the dominating state to have no
 fewer resources along any axis. Our notion of dominance is more
-general, and we are able to find useful partial orders in more general
-domains.
+general. That is, we are able to find more powerful partial orders
+in more general domains.
 
-More recently, in another satisficing planner, \citet{roger2010more}
-combined multiple heuristics by only expanding those states which
-were currently Pareto optimal with respect to the current open set.
-By contrast, we seek to \textit{prune} search states while still
+In another satisficing planner, \citet{roger2010more} combined
+multiple heuristics by only expanding those states which were
+currently Pareto optimal with respect to the current open set.  By
+contrast, we seek to \textit{prune} search states while still
 maintaining optimality.
 
-Still others have employed other notions of partial orders while
-maintaining completeness and optimality. These methods largely fall
-into a category known as ``partial order reduction techniques,''
-which have their origins in computer aided verification. These
-methods fall into two categories: those that prune states and those
-that prune transitions.  The former class includes expansion cores
-\citep{chen09completeness, xu11theory}, which select only ``relevant''
-actions for any given state. The latter consists of methods like
-commutativity pruning~\citep{geffner2000admissible}, which prunes
-redundant permutations of partial plans, and stratified
+Still others have employed fairly different notions of partial
+orders while maintaining completeness and optimality. These methods
+largely fall into a category known as ``partial order reduction
+techniques,'' which have their origins in computer aided verification.
+This class includes expansion cores \citep{chen09completeness,
+xu11theory}, which select only ``relevant'' actions for any given
+state, commutativity pruning~\citep{geffner2000admissible}, which
+prunes redundant permutations of partial plans, and stratified
 planning~\citep{chen2009stratified}, which identifies layers of the
 planning problem and only considers actions appropriate to a given
 layer. \citet{wehrle2012partial} recently showed that all of these
 techniques are special cases of more general techniques from computer
-aided verification, namely sleep sets~\citep{godefroid96partial} and
-stubborn sets~\citep{valmari92stubborn}. These methods are largely
-orthogonal to our approach. Indeed we use something not unlike
-expansion cores in our system.
+aided verification, namely sleep sets~\citep{godefroid96partial}
+and stubborn sets~\citep{valmari92stubborn}. These methods are
+largely orthogonal to our approach; indeed, we use something not
+unlike expansion cores in our system.
 
 
 \subsection{Algorithm}
 
-Skyplan is a fairly straightforward modifications of a standard optimal search
-algorithm like Uniform Cost
-Search or \Astar. For the sake of exposition, we focus on Uniform
-Cost Search, though \Astar or any optimal graph search algorithm can
-be modified in the same way. (In our experiments we use either \Astar or Hierarchical \Astar.)
+Skyplan is a fairly straightforward modification of a standard
+optimal search algorithm like Uniform Cost Search or \Astar. For
+the sake of exposition, we focus on Uniform Cost Search, though
+\Astar or any optimal graph search algorithm can be modified in the
+same way.\footnote{In our experiments we use either \Astar or
+Hierarchical \Astar.~\citep{holte1996hierarchical}}
 
 Skyplan is defined in Algorithm \ref{alg:skyplan}. Essentially, we
 run Uniform Cost Search as normal, except that we only expand states
-that are not strictly dominated by another state we've either
+that are not strictly dominated by another state that we have either
 expanded or enqueued for expansion. That is, we only expand nodes
 that are in the \textit{skyline} of the nodes we know about so far.
 
@@ -205,7 +219,7 @@ the skyline of the successors of the state being expanded and only
 attempt to enqueue those nodes.  This check is purely an optimization,
 not affecting optimality or completeness. Whether or not it is
 useful depends on the kinds of search operators being applied: if
-there are many similar successors to a state, this can prune a very large
+there are many similar successors to a state, this check can prune a very large
 number of states. However, if most actions are very different, it will
 likely have no effect.
 
@@ -244,6 +258,7 @@ likely have no effect.
   Because $m$ is a better state than $n$, and $m$'s successors
   ``stay ahead'' of $n$'s, we can safely avoid expanding $n$ while
   still preserving optimality.}
+  \label{fig:compatibility}
 \end{figure}
 
 Not just any partial order on states can be used to preserve optimality. As a perverse
@@ -273,33 +288,47 @@ a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
 states $m$ and $n$.
 
+Figure \ref{fig:compatibility} illustrates 
+compatibility for a simple graph. If our goal is accumulate at
+least 18 widgets, then $m$ is clearly better than $n$ as
+it has more widgets in less time. Moreover, none
+of $n$'s successors reach a point better than all of $m$'s 
+successors. Because paths through $m$ continue to
+``stay ahead'' of those passing through $n$, we
+can safely prune $n$.
+
 In planning problems, defining a compatible partial order is usually
 quite easy, so long as cost functions are additive.  Actions are
 often defined in terms of partial states with constant costs (e.g.\
-time elapsed), and so compatibility is easily checked.  In the
-sequel, we discuss a standard structure for these partial orders,
-as well as how to automatically infer a partial order from the
-specification of a planning problem.
+time elapsed), and so compatibility is easily checked.  After proving
+the correctness and optimality of Skyplan, we discuss a standard
+structure for these partial orders, as well as how to automatically
+infer a compatible partial order from the specification of a planning problem.
 
 \subsection{Analysis}
 
-In this section, we show that Skyplan is complete and optimal for 
-any compatible partial order, when used in conjunction with an optimal
-search algorithm like Uniform Cost Search or \Astar Before proving the main results of this section, we prove a useful lemma. 
+In this section, we show that Skyplan is complete, optimal, and
+optimally efficient for any compatible partial order when used in
+conjunction with an optimal search algorithm like Uniform Cost
+Search or \Astar. Before proving the main results of this section,
+we prove a useful lemma.
 
 \begin{lemma}{}\label{clm-complete-lemma}
   Let $p$ be a path to a goal, let $m$ be one state in $p$, and let 
-$p_{n:}$ be the suffix of the path starting from $n$. If $m$ is a state
+$p_{n:}$ be the suffix of the path starting from $n$, and $|p|$
+be
+the length of a path in terms of the number of states. If $m$ is a state
 with $m \succeq n$, then there is a corresponding path $q$ that reaches a goal state
 through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $\mathrm{cost}(q) \leq \mathrm{cost}(p)$.
 \end{lemma}
+
 \begin{proof}
 $p_{m:}=(m,m_{1},\dots,m_{k})$ with $m_{k}$ a goal state.
 By condition (2) of compatibility, $\exists n_{1} \in \mathrm{succ}(n)$ 
 with $n_{1} \succeq m_{1}$ and $\mathrm{cost}(n,n_{1}) \leq \mathrm{cost}(m,m_{1})$. 
 Similarly, $\exists n_{2},\dots,n_{k}$ with 
 $n_{i} \succeq m_{i}$ and $n_{i+1} \in \mathrm{succ}(n_{i})$ with 
-total cost $\leq cost(p_{m:})$.
+total cost $\leq \mathrm{cost}(p_{m:})$.
 By condition (3) of compatibility, $n_{k} \in F$. By condition (1),
 there is a path from $s$ to $n$ with $g(n) \leq g(m)$. The above argument extends this path
 to the goal state $n_{k}$ and completes the proof of the lemma.
@@ -312,7 +341,7 @@ allows us to equivalently reason about paths being pruned by other paths.
 In the following proof, we use these notions interchangeably.
 
 
-\begin{claim}{}\label{clm-complete}
+\begin{claim}{Completeness.}\label{clm-complete}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{complete}.
 \end{claim}
@@ -324,7 +353,7 @@ For all paths, let $n_{i+1} \in p^{i+1}$ be the state which pruned $p^{i}$ and
 $m_{i} \in p^{i}$ the corresponding state which was pruned 
 ($\forall i: m_{i} \preceq n_{i+1}$).
 
-Because each $m_{i}$ was pruned before being place in $Open$,
+Because each $m_{i}$ was pruned before being expanded,
 $n_{i} \neq m_{i}$ nor any state succeeding $m_{i}$ in $p^{i}_{m_{i}:}$.
 Hence $p^{i}_{n_{i}:} \supsetneq p^{i}_{m_{i}:} \implies |p^{i}_{n_{i}:}| > |p^{i}_{m_{i}:}|$.
 By the lemma, we also have % \reference?
@@ -333,14 +362,15 @@ inequalities yields: $|p^{1}_{m_{1}:}| \geq |p^{2}_{n_{2}:}| > |p^{2}_{m_{2}:}| 
 a contradiction.
 \end{proof}
   
-\begin{claim}{Optimality}\label{clm-optimal}
+\begin{claim}{Optimality.}\label{clm-optimal}
    If $\preceq$ is a compatible partial order, Skyplan
 is \emph{optimal}.
 \end{claim}
 \begin{proof} 
 Let $p^{*}$ be the last optimal path that was pruned during a run of Skyplan. 
 By the proof of Claim \ref{clm-complete} and the lemma 
-there is some path $p^\prime$ that is not pruned with $cost(p^\prime) \leq cost(p^{*})$.
+there is some path $p^\prime$ that is not pruned with
+$\mathrm{cost}(p^\prime) \leq \mathrm{cost}(p^{*})$.
 Thus, $p^\prime$ is optimal as well.
 \end{proof}
 
@@ -348,15 +378,17 @@ By leveraging the information contained in the partial order, Skyplan is able to
 optimal plans while expanding fewer states in general.  But is Skyplan using this added
 information in the best possible manner? It is easy to see that any state expanded by 
 Skyplan must not be dominated by any other state in the graph: otherwise $Closed$ would
-contain such a dominating state when the about-to-be-expanded state was popped, pruning it.  This turns out to be enough to prove the following:
+contain such a dominating state when the about-to-be-expanded
+state was popped, thereby pruning it.  This turns out to be
+enough to prove the following:
 
-\begin{claim}{}\label{clm-optimally-efficient}
+\begin{claim}{Optimal Efficiency.}\label{clm-optimally-efficient}
 For any compatible partial order $\prec$, Skyplan is \emph{optimally efficient}.
 \end{claim}
 \begin{proof} 
 (We prove the claim on the set of graphs for which all paths have unique costs: $n \neq m \implies g(n) \neq g(m)$.)
 
-Suppose otherwise; there must exist an optimal algorithm B and a search problem $(G,\preceq)$ 
+Suppose otherwise. Then, there must exist an optimal algorithm B and a search problem $(G,\preceq)$ 
 on which B expands (calls the successor function on) strictly fewer states than Skyplan. 
 Let $n^{*}$ be a state expanded in Skyplan but not by B on the problem $(G,\preceq)$, and let
 $f_{B}$ be the goal state returned by B. We construct a new graph $G^\prime$ by adding a single goal state $f^*$ to $G$ 
@@ -375,6 +407,7 @@ must therefore follow the same execution path on the graph $G^\prime$, returning
 But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the optimality of B.
  \end{proof}
 
+
 \section{Inferring Partial Orders}
 
 \newcommand{\po}{\preceq_R}
@@ -382,12 +415,12 @@ But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the
 Now that we have a definition of compatible partial orders and an
 algorithm that can take advatage of them, all we need is a method
 for finding them. Of course, one can construct them by hand using
-domain knowledge, but that is less than satisfactory. In this
-section, we show how to automatically infer a compatible partial
-order from a classical planning problem domain's specification,
-such as PDDL.~\citep{ghallab1998pddl,fox2003pddl2} In the next
-section, we will extend this algorithm to a broad class of concurrent
-domains.
+domain knowledge, but that is less than ideal. In this section, we
+show how to automatically infer a compatible partial order from a
+sequential planning problem domain's specification, such as those
+available in PDDL.~\citep{ghallab1998pddl,fox2003pddl2} In the next
+section, we will extend this procedure to a broad class of concurrent
+domains with durative actions.
 
 When planning with resources, a basic planning state $n$ can be viewed as a mapping from
 resource types to values. That is, for a given resource $r$, $n(r) \in \R$ is the quantity
@@ -397,13 +430,14 @@ purposes of defining a partial order we view these as special resources that alw
 values in \{0, 1\}.
 
 If we want to determine whether a state $\mathbf{n}$ dominates $\mathbf{m}$, then we need
-to know two things: first, does $\mathbf{n}$ have lower cost, and second, does $\mathbf{n}$
+to know two things: first, does $\mathbf{n}$ have lower cost; and second, does $\mathbf{n}$
 have a more ``useful'' set of resources? The first criterion is easy to check, but the
-second requires some notion of what it means for resources to be useful or not.
+second requires some notion of what it means for a resource to be useful or not.
 
 There are basically two ways in which the value of a particular resource can matter: it can
 either contribute to satisfying the goal test $n \in F$, or it can contribute to satisfying
-the precondition of some action that might get us closer to the goal. In both cases, we're
+the precondition of some action that might get us closer to the
+goal. In both cases, we are
 concerned with the relationship between the value of a particular resource $r$, and a
 particular boolean predicate $b$. In general, we want to know when it helps to have more (or less) of a particular resource, leading us to the following classification
 of predicates based on how they interact with a given resource. Let $b(n)$ be the value of the predicate $b$ in state $n$.
@@ -433,7 +467,7 @@ Using these definitions, we can construct a partial order based on three parts o
 	\item The goal test: $n \in F$.
 \end{enumerate}
 
-Let $B$ be the set of all relevant predicates, that is the set of preconditions for each action plus the goal test. Then we partition all the resources into four disjoint sets: $R^+$, $R^-$, $R^=$, and $R^\emptyset$, according to the following criteria:
+Let $B$ be the set of all relevant predicates, that is, the set of preconditions for each action plus the goal test. Then we partition all the resources into four disjoint sets: $R^+$, $R^-$, $R^=$, and $R^\emptyset$, according to the following criteria:
 \begin{itemize}
 	\item $r \in R^+$ if $\forall b \in B, b$ is $r$-dependent implies that $b$ is $r$-positive, and $\exists$ at least one $b \in B$ that is $r$-positive.
 	\item $r \in R^-$ if $\forall b \in B, b$ is $r$-dependent implies that $b$ is $r$-negative, and $\exists$ at least one $b \in B$ that is $r$-negative.
@@ -441,7 +475,14 @@ Let $B$ be the set of all relevant predicates, that is the set of preconditions 
 	\item $r \in R^\emptyset$ if $\forall b \in B, b$ is \emph{not} $r$-dependent.
 \end{itemize}
 
-Finally, we can define the partial order $\po$:
+These sets are fairly intuitive. For instance, resources in
+$R^+$ are better the more you have of them (e.g.\ widgets),
+while resources in $R^=$ have a complex relationship with
+the problem, and so it is not safe to prune a state $n$ unless
+it has the exact same value as its potential dominator for that
+resource.  $R^\emptyset$ consists of those resources that
+have no effect on any condition in the problem. Finally, we can define the partial order $\po$:
+
 \begin{definition}[$\po$]
 	\label{def-po}
 	For planning states $\mathbf{n} = (n, c)$ and $\mathbf{m} = (m, d)$, we say that $\mathbf{n} \po \mathbf{m}$ if and only if:
@@ -459,7 +500,9 @@ Finally, we can define the partial order $\po$:
 \begin{proof}
 	Condition 1 of Definition~\ref{def-compatibility} follows directly from condition 1 of Definition~\ref{def-po}.
 	
-	To verify condition 3 of Definition~\ref{def-compatibility}, we only need to consider resources $r$ for which the goal test is $r$-dependent (changes in other resources will not affect the outcome of the test). If the goal test is $r$-positive, then $r \in R^+$ or $r \in R^=$, so $n(r) \le m(r)$. If the goal test is $r$-negative, then $r \in R^-$ or $r \in R^=$, so $n(r) \ge m(r)$. If the goal test is neither (but is $r$-dependent), then $r \in R^=$, so $n(r) = m(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
+	To verify condition 3 of Definition~\ref{def-compatibility},
+  we only need to consider resources $r$ for which the goal
+  test is $r$-dependents, as changes in other resources will not affect the outcome of the test. If the goal test is $r$-positive, then $r \in R^+$ or $r \in R^=$, so $n(r) \le m(r)$. If the goal test is $r$-negative, then $r \in R^-$ or $r \in R^=$, so $n(r) \ge m(r)$. If the goal test is neither (but is $r$-dependent), then $r \in R^=$, so $n(r) = m(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
 	
 	Finally, to verify condition 2 of Definition~\ref{def-compatibility}, observe that some particular action results in the transition from $n$ to $n^\prime$. By the argument above, if the precondition of this action holds for $n$, then it also holds for $m$. Let
   $m^\prime$ be the result of taking this action from $m$. By assumption, the cost is identical, and also by assumption, the change in resources from $m$ to $m^\prime$ is identical to that from $n$ to $n^\prime$, which implies that $\forall r, m^\prime(r) -
@@ -467,28 +510,28 @@ Finally, we can define the partial order $\po$:
 \end{proof}
 
 A few remarks are in order with regard to this inferred ordering.
-First, it may not be the best such ordering. Consider a domain in
-which we need can use sprockets to make a transmogrifier (sp?), but
+First, it may not be the best ordering for a given problem. Consider a domain in
+which we need can use sprockets to make a transmogrifier, but
 not widgets. However, suppose there is a free conversion from widgets
 to sprockets, and vice versa---because sprockets are in fact just
 upside down widgets. In this case, sprockets and widgets are
 interchangeable, and so we can actually prune based on the sum of
 their count. However, this method is incapable of realizing this
-relationship. In general we suspect that it is intractable to find the
+relationship. In general we suspect that it is
+intractable to find the
 optimal partial ordering, but that such perverse examples
 as the one just described are rare.
 
 Second, there are occasionally resources that are usually beneficial,
-but they might have some upper limit. For instance, we might like
-to have as many widgets as possible, except that we have only a
-large but finite amount of storage space for them.  In this case,
+but they might have some high upper limit. For instance, we might
+like to have as many widgets as possible, except that we have only
+a large but finite amount of storage space for them.  In this case,
 we would not be able to prune based on the number of widgets: its
-resource would necessarily be in $R^=$. However, if the maximum
-number of widgets is indeed so high that we suspect that we will
-not reach it in search, we can treat it as though there was no
-limit. If we do in fact hit the limit, we then have to re-enqueue
-all nodes pruned based on widget count, and back off to the original
-partial order.
+resource would be in $R^=$. However, if the maximum number of widgets
+is indeed so high that we suspect that we will not reach it in
+search, we can treat it as though there was no limit. If we do in
+fact hit the limit, we then have to re-enqueue all nodes pruned
+based on widget count, and back off to the safer partial order.
 
 \section{Partial Orders and Concurrency} 
 
@@ -498,7 +541,8 @@ simple actions available to the agent. However, in planning domains
 that permit multiple simultaneous actions, the state space and the
 search graph need to be augmented slightly for planning to still
 work properly as a search problem. In this work, we use a mild
-adaptation of the concurrent planning framework described in XXX.
+adaptation of the concurrent planning framework described in
+\citet{bacchus2001planning}.
 First, we briefly describe this representation, and then describe
 the extension of the partial order inference to concurrent domains.
 
@@ -543,19 +587,28 @@ actions have \emph{beneficial} completion effects.\footnote{This assumption is m
 domains we consider in this work.} Formally, this means that any resource whose value is
 increased at completion is in $R^+$ or $R^\emptyset$, and any resource whose value is decreased is in
 $R^-$ or $R^\emptyset$. The extension to more general action effects is straightforward.
+
+Intuitively, a state $m$ can only be better than a state $n$ if
+its action queue finishes faster than $n$'s, or if $m$ already
+has more resources than $n$ will have. We formalize this
+intuition as follows:
+
 \begin{definition}[$\poq$]
 	\label{def-poq}
 	Let $q(n)$ denote the action queue for state $n$. For planning states $\textbf{n} = (n, c)$ and $\textbf{m} = (m, d)$, we say that $\textbf{n} \poq \textbf{m}$ if and only if $\textbf{n} \po \textbf{m}$, and $\forall (a, t) \in q(n)$, at least one of the following conditions holds:
 	\begin{enumerate}
 		\item $\exists$ a distinct $ (a, t^\prime) \in q(m)$ with $t^\prime \le t$.
-		\item $\forall r $ affected by the completion effects of $ a$, the change from $n(r)$ to $m(r)$ is at least as big as that produced by $a$, with multiplicity. XXX burkett, what does this mean?
+		\item $\forall r $ affected by the completion effects of $
+      a$, the change from $n(r)$ to $m(r)$ is at least as big
+      as that produced by all actions currently enqueued that
+      are not satisfied by condition 1.
 	\end{enumerate}
 \end{definition}
 The notion of a \emph{distinct} pair $(a, t^\prime)$ is important, as the same action can appear multiple times in the same action queue. For example, let $a$ be an action whose completion effect is ``Gain 5 $r$''. If $q(n) = \{(a, 10), (a, 20)\}$ then $q(m) = \{(a, 10),
 (a, 15)\}$ meets this condition, but $q(m) = \{(a, 5)\}$ does not, unless $m(r) \ge n(r) + 5$. Similarly, $q(m) = \{\}$ does not meet the condition unless $m(r) \ge n(r) + 10$.
 
 \begin{claim}{}{\label{clm-poq-compatible}}
-	If action costs and effects are deterministic, and all action completion effects are beneficial, then $\poq$ is compatible.
+	If action costs and effects do not depend on the state, and all action completion effects are beneficial, then $\poq$ is compatible.
 \end{claim}
 \begin{proof}
 
@@ -586,24 +639,26 @@ Taken altogether, this means we still have $\textbf{n} \poq \textbf{m}$.
 
 \section{Skyplan in Practice}
 
-Thus the basic outline of our system is fairly straightforward.
-Given a planning problem, Skyplan infers the partial ord
+Thus, the basic outline of our system is fairly straightforward.
+Given a planning problem, Skyplan infers the partial order
+and we then use that partial order in a standard graph search.
 
 There are a few pragmatic details of our system that can substantially
 affect performance that are worth mentioning. One is our choice of
-Hierarchical \Astar as base search algorithm, since we found to be
-one of the best algorithms. The other is the somewhat more mundane
-question of how best to implement a skyline query for our setting.
-In this section, we discuss each in turn.
+Hierarchical \Astar~\citep{holte1996hierarchical} as base search
+algorithm, since we found to be one of the best algorithms. The
+other is the somewhat more mundane question of how best to implement
+a skyline query for our setting.  In this section, we discuss each
+in turn.
 
 \subsection{Hierarchical \Astar}
 
 While skyline pruning works with any optimal search procedure, this
 pruning method has a particular synergy with the Hierarchical \Astar
-algorithm~\citep{holte1996hierarchical}. Hierarchical \Astar works
+algorithm. Hierarchical \Astar works
 by identifying a series of relaxations to the search space, and
 uses each level of relaxation as the (admissible and consistent)
-heuristic for the corresponding lower level. 
+heuristic for the corresponding lower level.
 
 One particularly easy way to apply this algorithm to planning is
 to define the relaxations only in terms of relaxations to the goal
@@ -619,8 +674,7 @@ by a state at \textit{any} level of the hierarchy.  In particular,
 the combination of Hierarchical \Astar and skyline pruning means
 that the projected searches give us two sources of information: how
 far a state is from a (partial) goal, and which states are not
-possibly on the optimal path to the full goal. likely XXX Experiments
-on this.
+possibly on the optimal path to the full goal. 
 
 \subsection{Implementing Skyline Pruning}
 
@@ -628,7 +682,7 @@ The implementation of skyline pruning is somewhat delicate.  There
 is some work in this area in the database literature, but these are
 not designed for online applications~\citep{skylineoperator,tan01efficient}
 or are for fairly low dimensional states~\citep{KossmannRR02}, and
-so they are not likely to be useful here.
+so they are not useful here.
 
 The obvious, na\"ive solution is to maintain a list of all elements
 in the current the skyline, and to check all of these elements when
