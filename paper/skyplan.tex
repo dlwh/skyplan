@@ -728,6 +728,23 @@ in practice it is several orders of magnitude faster.
 
 \section{Experiments}
 
+
+\begin{table*}
+	\begin{center}
+		\begin{tabular}{|c|cc|cc|cc|cc|cc|}
+		\hline
+		\multirow{2}{*}{Planner} & \multicolumn{2}{c|}{Problem 1}  & \multicolumn{2}{c|}{Problem 2} & \multicolumn{2}{c|}{Problem 3} & \multicolumn{2}{c|}{Problem 4} & \multicolumn{2}{c|}{Problem 5} \\
+		& Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time \\
+		\hline
+		Hierarchical \Astar & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
+		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & 1,309,482 & 2814 \\
+		\hline
+		\end{tabular}
+	\end{center}
+	\caption{Results on the woodworking domain. Times are in seconds, and are averaged over 20 runs for problems 1, 2, and 3; over 10 runs for problem 4; and over 5 runs for problem 5.}
+	\label{tab:woodworking}
+\end{table*}
+
 We empirically evaluated Skyplan in two domains. First, we ran experiments on a collection
 of standard job shop tasks from the woodworking domain. We chose this domain because it
 permits simultaneous actions, and Skyplan is particularly well-suited to domains where the
@@ -751,25 +768,9 @@ for heuristic computation) and the total time taken by each algorithm.\footnote{
 these experiments were run on isolated 2.67GHz Intel Xeon processors.} The results are
 shown in Table~\ref{tab:woodworking}.
 
-\begin{table*}
-	\begin{center}
-		\begin{tabular}{|c|cc|cc|cc|cc|cc|}
-		\hline
-		\multirow{2}{*}{Planner} & \multicolumn{2}{c|}{Problem 1}  & \multicolumn{2}{c|}{Problem 2} & \multicolumn{2}{c|}{Problem 3} & \multicolumn{2}{c|}{Problem 4} & \multicolumn{2}{c|}{Problem 5} \\
-		& Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time \\
-		\hline
-		Hierarchical \Astar & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
-		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & & \\
-		\hline
-		\end{tabular}
-	\end{center}
-	\caption{Results on the woodworking domain. Times are in seconds, and are averaged over 20 runs for problems 1, 2, and 3; over 10 runs for problem 4; and over 5 runs for problem 5.}
-	\label{tab:woodworking}
-\end{table*}
-
 Skyplan is consistently faster than Hierarchical \Astar, typically pruning almost 50\% of the
 nodes that H\Astar expands. Maintaining the skyline does impose some overhead cost, but Skyplan
-still retains anywhere from a 15\% to a 35\% speed advantage.
+still retains anywhere from a 15\% to a 35\% speed advantage on the first four problems. In problem 5, which expands many more states, the asymptotic complexity of maintaining the skyline overwhelms the gains from pruning about half of the state space. This is not unexpected in this domain, which has relatively little concurrency, and so we turn now to a domain where the gains from Skyplan's pruning are more apparent.
 
 \subsection{The StarCraft Domain}
 
