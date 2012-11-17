@@ -15,6 +15,7 @@
 \usepackage{natbib}
 \usepackage{textcomp}
 \usepackage{graphicx}
+\usepackage{multirow}
 
 \theoremstyle{plain} \newtheorem{theorem}{Theorem} \newtheorem{proposition}{Proposition} \newtheorem{lemma}{Lemma}
 \newtheorem*{corollary}{Corollary}  \newtheorem{claim}{Claim} 
@@ -655,6 +656,48 @@ in practice it is several orders of magnitude faster.
 
 \section{Experiments}
 
+We empirically evaluated Skyplan in two domains. First, we ran experiments on a collection
+of standard sawing tasks from the woodworking domain. We chose this domain because it
+permits simultaneous actions, and Skyplan is particularly well-suited to domains where the
+extra freedom afforded by concurrency results in an explosion in the set of possible
+states. However, like most standard planning domains, this one is largely concerned with
+discrete objects rather than ever-growing resources, and so is still rather limited in the
+amount of concurrency needed, with even the most complex problems never permitting more
+than a dozen simultaneous actions, and the simpler problems that were amenable to optimal
+planning not requiring more than 2. Thus, we also ran experiments in a more realistic
+resource acquisition setting modeled on the video game StarCraft.
+
+\subsection{The Woodworking Domain}
+
+We used the woodworking problems released with 2008 International Planning Competition XXX~\cite{IPC2008}.
+Though the later problems are fairly challenging and require satisficing solutions,
+the earlier problems are simple enough to be solved by basic optimal planners. We compare
+Skyplan to basic Hierarchical A* on the first 5 problems from this domain. We measured
+the number of nodes popped (including those popped during the recursive searches used
+for heuristic computation) and the total time taken by each algorithm.\footnote{All
+these experiments were run on isolated 2.67GHz Intel Xeon processors.} The results are
+shown in Table~\ref{tab:woodworking}.
+
+\begin{table*}
+	\begin{center}
+		\begin{tabular}{|c|cc|cc|cc|cc|cc|}
+		\hline
+		\multirow{2}{*}{Planner} & \multicolumn{2}{c|}{Problem 1}  & \multicolumn{2}{c|}{Problem 2} & \multicolumn{2}{c|}{Problem 3} & \multicolumn{2}{c|}{Problem 4} & \multicolumn{2}{c|}{Problem 5} \\
+		& Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time \\
+		\hline
+		Hierarchical A* & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
+		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & & \\
+		\hline
+		\end{tabular}
+	\end{center}
+	\label{tab:woodworking}
+	\caption{Results on the woodworking domain. Times are in seconds, and are averaged over 20 runs for problems 1, 2, and 3; over 10 runs for problem 4; and over 5 runs for problem 5.}
+\end{table*}
+
+Skyplan is consistently faster than Hierarchical A*, typically pruning almost 50\% of the
+nodes that HA* expands. Maintaining the skyline does impose some overhead cost, but Skyplan
+still retains anywhere from a 15\% to a 35\% speed advantage.
+
 \subsection{The StarCraft Domain}
 
 StarCraft$^\textrm{\textregistered}$ is a real time strategy game
@@ -702,14 +745,6 @@ We chose XXX
 \begin{figure}
   \caption{states pruned table?}
 \end{figure}
-\subsection{The Woodworking Domain}
-\subsection{The StarCraft 2 Domain}
-\begin{figure}
-  \caption{Plan length over time? Anytime plan length over time?}
-\end{figure}
-
-XXX stuff about Starcraft 2 and Evo Chamber
-XXX http://www.pcgamer.com/2010/11/02/computer-program-finds-devastating-starcraft-2-build-orders/
 
 \section{Conclusion}
 
