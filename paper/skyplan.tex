@@ -59,7 +59,7 @@
   respect to this order can be pruned while provably maintaining
   optimality. We also describe a simple method for automatically
   discovering compatible partial orders in both serial and concurrent
-  domains. In our experiments we find that more than 99\% of search
+  domains. In our experiments we find that more than 90\% of search
   states can be pruned in some domains.
 \end{quote}
 \end{abstract}
@@ -119,7 +119,7 @@ In our experiments, we compare Skyplan to a similar implementation
 of $A^*$ in a job shop domain. In addition, we introduce a new
 domain, based on the popular video game StarCraft. Skyplan performs
 especially well in this latter domain, cutting the branching factor
-by as much as XXX\% compared to \Astar, and run times by more
+by as much as 90\% compared to \Astar, and run times by more
 than a factor of 10.
 
 \section{Skyplan}
@@ -398,7 +398,9 @@ enough to prove the following:
 For any compatible partial order $\preceq$, Skyplan is \emph{optimally efficient}.
 \end{claim}
 \begin{proof} 
-(We prove the claim on the set of graphs for which all paths have unique costs: $n \neq m \implies g(n) \neq g(m)$.)
+(We prove the claim on the set of graphs for which all paths have unique costs: $n \neq m \implies g(n) \neq g(m)$. This proof
+is similar to the analogous proof for \Astar in \citet{holte1996hierarchical}. The generalization to graphs with
+ties is also analogous, and we omit it in the interest of space.)
 
 Suppose otherwise. Then, there must exist an optimal algorithm B and a search problem $(G,\preceq)$ 
 on which B expands (calls the successor function on) strictly fewer states than Skyplan. 
