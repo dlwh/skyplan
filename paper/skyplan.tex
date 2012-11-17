@@ -116,7 +116,7 @@ domains with durative actions---which actions have uniformly
 good or bad final effects.
 
 In our experiments, we compare Skyplan to a similar implementation
-of $A^*$ in a job shop domain. In addition, we introduce a new
+of \Astar in a job shop domain. In addition, we introduce a new
 domain, based on the popular video game StarCraft. Skyplan performs
 especially well in this latter domain, cutting the branching factor
 by as much as XXX\% compared to \Astar, and run times by more
@@ -125,12 +125,12 @@ than a factor of 10.
 \section{Skyplan}
 
 
-We operate in the standard convention of planning with additive
-costs as search within a weighted directed graph.  A planning problem
+In this work, we focus on planning with additive
+costs, using the conventional formulation as search within a weighted directed graph.  A planning problem
 consists of a directed graph $G$ with planning states $n$. States are linked by directed edges with an associated
 cost function $\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.  There is
 also a privileged initial state $s$, along with a set of goal states
-$F$.  Further define $g(n)$ to be the cost of the shortest path from $s$
+$F$.  We define $g(n)$ to be the cost of the shortest path from $s$
 to a state $n$.  Our goal is to find a path from $s$ to some state
 $n_f \in F$ with the lowest $g$ cost.
 
@@ -302,7 +302,7 @@ This recursive definition of compatibility essentially means that
 if a state $n$ is dominated by a state $m$, then it must be the
 case that $n$ is no cheaper than $m$ and that $m$'s successors
 ``stay ahead'' of $n$'s. Finally, $F$ must be closed with respect
-to $\succeq$: every state that dominates a goal state must also be
+to $\preceq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
 states $m$ and $n$.
@@ -330,20 +330,20 @@ we prove a useful lemma.
 $p_{m:}$ be the suffix of the path starting from $m$, and $|p|$
 be
 the length of a path in terms of the number of states. If $n$ is a state
-with $n \succeq m$, then there is a corresponding path $q$ that reaches a goal state
-through $m$ with $|q_{m:}| \leq |p_{n:}|$ and $\mathrm{cost}(q) \leq \mathrm{cost}(p)$.
+with $m \preceq n$, then there is a corresponding path $q$ that reaches a goal state
+through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $\mathrm{cost}(q) \leq \mathrm{cost}(p)$.
 \end{lemma}
 
 \begin{proof}
-$p_{n:}=(n,n_{1},\dots,n_{k})$ with $n_{k}$ a goal state.
-By condition (2) of compatibility, $\exists m_{1} \in \mathrm{succ}(m)$ 
-with $m_{1} \succeq n_{1}$ and $\mathrm{cost}(m,m_{1}) \leq \mathrm{cost}(n,n_{1})$. 
-Similarly, $\exists m_{2},\dots,m_{k}$ with 
-$m_{i} \succeq n_{i}$ and $m_{i+1} \in \mathrm{succ}(m_{i})$ with 
-total cost $\leq \mathrm{cost}(p_{n:})$.
-By condition (3) of compatibility, $m_{k} \in F$. By condition (1),
-there is a path from $s$ to $m$ with $g(m) \leq g(n)$. The above argument extends this path
-to the goal state $m_{k}$ and completes the proof of the lemma.
+$p_{m:}=(m,m_{1},\dots,m_{k})$ with $m_{k}$ a goal state.
+By condition (2) of compatibility, $\exists n_{1} \in \mathrm{succ}(n)$ 
+with $n_{1} \succeq m_{1}$ and $\mathrm{cost}(n,n_{1}) \leq \mathrm{cost}(m,m_{1})$. 
+Similarly, $\exists n_{2},\dots,n_{k}$ with 
+$n_{i} \succeq m_{i}$ and $n_{i+1} \in \mathrm{succ}(n_{i})$ with 
+total cost $\leq \mathrm{cost}(p_{m:})$.
+By condition (3) of compatibility, $n_{k} \in F$. By condition (1),
+there is a path from $s$ to $n$ with $g(n) \leq g(m)$. The above argument extends this path
+to the goal state $n_{k}$ and completes the proof of the lemma.
 \end{proof}
 
 This lemma states that if $m \preceq n$, then there is a path from $n$ to a goal
