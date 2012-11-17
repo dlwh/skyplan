@@ -1,6 +1,6 @@
 package dlwh.skyplan
 
-import dlwh.search.{StateSkyline, NaiveSkyline, HierarchicalSkylineSearch, SearchProblem}
+import dlwh.search._
 import io.Source
 
 /**
@@ -8,7 +8,7 @@ import io.Source
  * @author dlwh
  */
 object HierarchicalSkyplan {
-  def findPlan(inst: ProblemInstance) = {
+  def findPlan(inst: ProblemInstance, skyplan: Boolean = true): Option[(Path[State, Option[Grounded[IndexedAction]]], (Double, Int))] = {
     implicit val ordering = Skyplan.makeOrdering(inst)
     def succ(s: State, cost: Double, goal: IndexedCondition): IndexedSeq[(State, Option[Grounded[IndexedAction]], Double)] = {
       val do_actions = s.relevantActions(goal).map { case grounding =>
@@ -24,18 +24,22 @@ object HierarchicalSkyplan {
       else do_actions
     }
 
-    val projected = projectionHierarchy(inst).map{ inst =>
-      SearchProblem(inst.initialState, {succ(_:State, _: Double, inst.goal)}, {(s: State) => inst.goal.holds(s, s.makeContext())})
+    val projected = projectionHierarchy(inst).map{ inst2 =>
+      SearchProblem(inst.initialState, {succ(_:State, _: Double, inst2.goal)}, {(s: State) => inst2.goal.holds(s, s.makeContext())})
     }
 
-    val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]](StateSkyline.factory(inst))
+    val oracle = if(skyplan) StateSkyline.factory(inst) else Oracle.allAllowed[State]
+    val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]](oracle, treeSearch = true)
+//        val search = new HierarchicalSkylineSearch[State, Option[Grounded[IndexedAction]]](Oracle.allAllowed, treeSearch = true)
     search.search(projected, IndexedSeq.fill(projected.length - 1)(identity))
   }
 
-    def projectionHierarchy(inst: ProblemInstance):IndexedSeq[ProblemInstance] = inst.goal match {
-      case AndCondition(conds) if conds.length > 1 => IndexedSeq(inst, inst.copy(goal=conds.head))
-      case _ =>  IndexedSeq(inst)
-    }
+  def projectionHierarchy(inst: ProblemInstance):IndexedSeq[ProblemInstance] = inst.goal match {
+    case AndCondition(cs)  if cs.length > 4 =>  inst +: projectionHierarchy(inst.copy(goal=AndCondition(cs.take(3))))
+    case _ =>  IndexedSeq(inst)
+  }
+
+
 
   def average(seq: IndexedSeq[Double]) = if (seq.size > 0) seq.sum / seq.size else 0.0
 
@@ -45,10 +49,17 @@ object HierarchicalSkyplan {
     }
     val domainFile = if (args.length >= 2) args(0) else "examples/pddl/woodworking/p03-domain.pddl"
     val problemFile = if (args.length >= 2) args(1) else "examples/pddl/woodworking/p03.pddl"
+    val skyplan = args.length <= 2 || args(2).toBoolean
     val input = slurpResource(domainFile)
     val input2 = slurpResource(problemFile)
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
+
+    if(skyplan) {
+      println("Skyplan!")
+    } else {
+      println("A*")
+    }
 
 
     try {
@@ -60,7 +71,7 @@ object HierarchicalSkyplan {
       val init = instance.initialState
       for (i <- 0 until maxRuns) {
         val start = System.currentTimeMillis()
-        val plan = HierarchicalSkyplan.findPlan(instance)
+        val plan = HierarchicalSkyplan.findPlan(instance, skyplan=skyplan)
         val stop = System.currentTimeMillis()
         assert(plan.nonEmpty,plan)
         println("Run " + (i+1))

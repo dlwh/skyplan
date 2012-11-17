@@ -1,6 +1,7 @@
 package dlwh.search
 
 import collection.mutable
+import collection.mutable.ArrayBuffer
 
 /**
  * 
@@ -31,81 +32,133 @@ class HierarchicalSkylineSearch[T, Action](oracleFactory: Oracle.Factory[T], tre
     implicit val ordState: Ordering[State] = Ordering[Double].on(-_.estimate)
 
     val heuristics: Array[mutable.Map[T, Double]] = Array.fill(numLevels)(mutable.Map[T, Double]())
-
     val skyline = oracleFactory.make
 
+    def fillOutHValues(level: Int, cur: State, cost: Double) {
+      for(ss <- cur.states) {
+        val c = cost - ss.cost
+        if(heuristics(level).contains(ss.t)) {
+          return
+        }
+        heuristics(level)(cur.t) = c
+      }
+    }
+
+    implicit val ordProblem:Ordering[RecursiveProblem] = Ordering[Double].on(-_.currentEstimate)
+
+    case class HappyException(goal: State, cost: Double) extends RuntimeException
+
     var popped = 0
-    object Searcher {
-      def recSearch(level: Int, init: T):Option[(State,Double)] = {
-        val queue = new mutable.PriorityQueue[State]()
-        val visited = mutable.HashSet[T]()
+    case class RecursiveProblem(level: Int,
+                                init: State, initialCost: Double,
+                                queue: mutable.PriorityQueue[State] = new mutable.PriorityQueue[State](),
+                                recQueue: mutable.PriorityQueue[RecursiveProblem] = new mutable.PriorityQueue[RecursiveProblem](),
+                                visited : mutable.HashSet[T] = new mutable.HashSet[T] ) {
+      var currentEstimate: Double = 0.0
 
-        enqueue(queue, State(level, init, 0, None, 0))
-        while(queue.nonEmpty) {
-          val cur = queue.dequeue()
-          import cur.{level=>_,_}
-          popped += 1
-          if(verbose && popped % 1000 == 0) {
-            println("Popped " + popped + " pruning: " + numAdded +"/" + numTried)
+      def advance():Option[Double] = {
+        val selfCost = queue.headOption.map(_.estimate).getOrElse(Double.PositiveInfinity)
+        if(recQueue.nonEmpty && selfCost > recQueue.head.currentEstimate) {
+          val x = recQueue.dequeue()
+          x.advance() match {
+            case None =>
+              recQueue += x
+            case Some(hCost) =>
+              if(!hCost.isInfinite) {
+                queue += x.init.copy(heur=hCost)
+              }
           }
+          currentEstimate = queue.headOption.map(_.estimate).getOrElse(Double.PositiveInfinity) min recQueue.headOption.map(_.currentEstimate).getOrElse(Double.PositiveInfinity)
+          None
+        } else if(!selfCost.isInfinite) {
+          dequeue match {
+            case None =>
+              currentEstimate = Double.PositiveInfinity
+              Some(Double.PositiveInfinity)
+            case Some(cur) =>
+//              println("Pop " + level + " " + cur.cost + " " + cur)
+              import cur.{level=>_, _}
+              popped += 1
 
-          if(instances(cur.level).isGoal(t)) {
-            return Some(cur -> cost)
-          } else if(level != 0 && heuristics(level).contains(t)) {
-            return Some(cur -> (cost + heuristics(level)(t)))
-          } else {
-            if(!treeSearch)
-              visited += t
+              if(instances(level).isGoal(t)) {
+                if(level == 0)
+                  throw new HappyException(cur, cost)
+                else {
+                  fillOutHValues(level, cur, cost - initialCost)
+                }
+                Some(cost - initialCost)
+              } /*else if(heuristics(level).contains(t)) {
+                println("close enough!" + cost + " " + heuristics(level)(t) + " " + level)
+                fillOutHValues(level, cur, cost + heuristics(level)(t))
+                Some(cost + heuristics(level)(t))
+              } */ else {
+                if(!treeSearch)
+                  visited += t
 
-            for( (s,a,c) <- cur.next) {
-              if(treeSearch || !visited(s))
-                enqueue(queue, State(level, s, cost + c, Some(a, cur)))
-            }
+                for( (s,a,c) <- cur.next) {
+                  if(treeSearch || !visited(s)) {
+                   enqueue(State(level, s, cost + c, Some(a -> cur), Double.NaN))
+                  }
+                }
+
+                currentEstimate = queue.headOption.map(_.estimate).getOrElse(Double.PositiveInfinity) min recQueue.headOption.map(_.currentEstimate).getOrElse(Double.PositiveInfinity)
+                None
+              }
           }
-
+        } else {
+          currentEstimate = Double.PositiveInfinity
+          Some(Double.PositiveInfinity)
         }
 
-        None
+
       }
 
-      var numAdded,numTried = 0
+      def dequeue: Option[State] = {
+        var cur = queue.dequeue()
+        while (!skyline.accepts(cur.t, cur.cost)) {
+          if (queue.isEmpty) return None
+          cur = queue.dequeue()
+        }
+        val c2 = cur
+        Some(c2)
+      }
 
-      // enqueues elements into the current queue, if h isn't available, it recursively searches
-      // to fill it in.
-      def enqueue(queue: mutable.PriorityQueue[State], state: State) {
-        import state._
+      def enqueue(t: T, cost: Double) {
+        enqueue(State(level, t, cost))
+        currentEstimate = queue.headOption.map(_.estimate).getOrElse(Double.PositiveInfinity) min recQueue.headOption.map(_.currentEstimate).getOrElse(Double.PositiveInfinity)
+      }
+
+      // returns the problem needed
+      def enqueue(state: State) {
+        import state.{level => _, _}
         if(level == proj.length) {
-          queue += state.copy(heur=instances.last.heuristic(state.t))
+          queue += state.copy(heur=instances.last.heuristic(t))
         } else {
-          val projected = proj(level)(state.t)
+          val projected = proj(level)(t)
           heuristics(level+1).get(projected) match {
             case Some(h) =>
               val newState = state.copy(heur=h)
-              if(skyline.accepts(newState.t, newState.cost)) {
-                queue += newState
-                numAdded += 1
-              }
-              numTried += 1
+              queue += newState
             case None =>
-              for( (goal,cost) <- recSearch(level+1, projected)) {
-                fillOutHValues(goal, cost)
-                if(cost != Double.PositiveInfinity)
-                  enqueue(queue, state)
-              }
+              val newProblem = RecursiveProblem(level+1, state, state.cost)
+              newProblem.enqueue(projected, state.cost)
+              recQueue += newProblem
           }
-        }
-      }
-
-      def fillOutHValues(cur: State, cost: Double) {
-        for(ss <- cur.states) {
-          heuristics(ss.level).getOrElseUpdate(ss.t, cost - ss.cost)
         }
       }
     }
 
 
-
-    for( (goal,cost) <- Searcher.recSearch(0, instances.head.init)) yield goal.toPath.reverse -> (cost, popped)
+    val level0Problem = RecursiveProblem(0, null, 0.0)
+    level0Problem.enqueue(instances.head.init, 0.0)
+    try {
+      while(level0Problem.currentEstimate != Double.PositiveInfinity) {
+        level0Problem.advance()
+      }
+      None
+    } catch {
+      case HappyException(goal, cost) => Some(goal.toPath.reverse ->(cost, popped))
+    }
   }
 
 

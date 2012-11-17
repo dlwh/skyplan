@@ -40,7 +40,7 @@ class HierarchicalAStarSearchTest extends FunSuite {
     val (path, cost) = astar.search(IndexedSeq(problem), IndexedSeq()).get
     val syms = path.toStateList
     assert(syms === List('s, 'd, 'e, 'g))
-    assert(cost === 7.0)
+    assert(cost._1 === 7.0)
   }
 
   test("wikipedia, identity projection") {
@@ -74,7 +74,7 @@ class HierarchicalAStarSearchTest extends FunSuite {
     val (path, cost) = astar.search(IndexedSeq(problem, problem), IndexedSeq(identity[Symbol])).get
     val syms = path.toStateList
     assert(syms === List('s, 'd, 'e, 'g))
-    assert(cost === 7.0)
+    assert(cost._1 === 7.0)
   }
 
   test("wikipedia, slightly trivial projection") {
@@ -114,7 +114,7 @@ class HierarchicalAStarSearchTest extends FunSuite {
     val (path, cost) = astar.search(IndexedSeq(problem, πroblem), IndexedSeq(proj)).get
     val syms = path.toStateList
     assert(syms === List('s, 'd, 'e, 'g))
-    assert(cost === 7.0)
+    assert(cost._1 === 7.0)
   }
 
 

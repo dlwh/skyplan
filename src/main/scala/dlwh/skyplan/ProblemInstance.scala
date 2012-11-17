@@ -48,7 +48,7 @@ case class State(problem: ProblemInstance,
   }
 
   def possibleActions = {
-    (for( a <- problem.actions.index; argList <- allPossibleGrounded(a)) yield a -> argList).toIndexedSeq
+    (for( a <- problem.actions.index; argList <- allPossibleGrounded(a)) yield Grounded(a, argList, IndexedSeq(""))).toIndexedSeq
   }
 
   def applyAction(groundedIndex: Int, duration: Double) {
