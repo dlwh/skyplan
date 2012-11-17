@@ -121,7 +121,7 @@ consists of a directed graph $G$ with states $n$ representing
 partial plans. States are linked by directed edges with an associated
 cost function $\mathrm{cost}(n_s,n_t) \in \mathbb R^+$.  There is
 also a privileged initial state $s$, along with a set of goal states
-$F$.  Further define $g(n)$ to be the minimum cost path from $s$
+$F$.  Further define $g(n)$ to be the cost of the shortest path from $s$
 to a state $n$.  Our goal is to find a path from $s$ to some state
 $n_f \in F$ with the lowest $g$ cost.
 
@@ -152,10 +152,10 @@ n^\prime\}$.
 
 For example, in Figure \ref{fig:skyline}, we consider a domain with
 two resources, widgets and sprockets. If having more widgets and
-more sprockets is alway better, than all states that are not at one
-of the corners of the skyline are strictly dominated by one or more
+more sprockets is always better, then all states that are not at one
+of the upper-right corners of the skyline are strictly dominated by one or more
 of the states that are.  Thus, if all states have the same cost,
-we can safely remove states from search.
+we can safely remove these states from the search.
 
 Our goal is to define an optimal search algorithm that can exploit
 this partial order to reduce the search space by only expanding
@@ -227,7 +227,7 @@ likely have no effect.
 \begin{algorithm}
   \begin{algorithmic}[1]
     \Procedure{UCSSkyplan}{$s, G, F, \preceq$}
-    \State Initialize $Open=\{\langle s,0\rangle\}$, $Closed=\{\}$, $Pruned=\{\}$
+    \State Initialize $Open=\{\langle s,0\rangle\}$, $Closed=\{\}$
     \While{ $Open$ is not empty}
     \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in Open$
       \State $n\rightarrow Closed$
@@ -290,12 +290,12 @@ states $m$ and $n$.
 
 Figure \ref{fig:compatibility} illustrates 
 compatibility for a simple graph. If our goal is accumulate at
-least 18 widgets, then $m$ is clearly better than $n$ as
+least 18 widgets, then $n$ is clearly better than $m$ as
 it has more widgets in less time. Moreover, none
-of $n$'s successors reach a point better than all of $m$'s 
-successors. Because paths through $m$ continue to
-``stay ahead'' of those passing through $n$, we
-can safely prune $n$.
+of $m$'s successors reach a point better than all of $n$'s 
+successors. Because paths through $n$ continue to
+``stay ahead'' of those passing through $m$, we
+can safely prune $m$.
 
 In planning problems, defining a compatible partial order is usually
 quite easy, so long as cost functions are additive.  Actions are
