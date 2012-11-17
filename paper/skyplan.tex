@@ -842,6 +842,19 @@ accurate plans, particularly in the early game, where seconds
 are so critical.\footnote{We will release a PDDL version
 of this specification upon publication.}
 
+\subsubsection{Results in the StarCraft Domain}
+We selected a number of early game units and resource combinations as goals for our planners,
+ and compared Skyplan against an \Astar planner and Greedy planner. The Greedy planner determines which 
+structures and units are required to reach the goal and builds the most costly structures first, taking dependencies
+into account.  We compared plan length and total planning time by each algorithm, and further compared the number
+of nodes popped or pruned in Skyplan and \Astar. The implementations of Skyplan and \Astar used in this domain are
+not using Hierarchical implementation discussed above.
+
+On every problem, Skyplan expands less than 10\% of the nodes that \Astar expands, expanding as few as XX\%. 
+At least 80\% of nodes encountered by Skyplan are pruned without being expanded. In the simplest problems, Skyplan 
+achieves a modest 55\% speedup; on the most complex problems, the speedup is as high as 83\%. In every case, 
+the Greedy Planner discovers a satisficing plan in less than 100ms, but these plans can take up to three times longer than optimal.
+
 \section{Conclusion}
 
 Planning in highly concurrent domains can be particularly challenging for standard
