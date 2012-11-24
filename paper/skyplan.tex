@@ -209,6 +209,31 @@ largely orthogonal to our approach; indeed, we use something not
 unlike expansion cores in our system.
 
 
+
+\begin{algorithm}[t!]
+  \begin{algorithmic}[1]
+    \Procedure{UCSSkyplan}{$s, G, F, \preceq$}
+    \State Initialize $\textit{Open}=\{\langle s,0\rangle\}$, $\textit{Closed}=\{\}$
+    \While{ \textit{Open} is not empty}
+    \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in \textit{Open}$
+    \State $n\rightarrow \textit{Closed}$
+      \If {$n\in F$} 
+        \State \Return the path to $n$ following back pointers
+      \EndIf
+      \If {$\forall m \in \textit{Open} \cup \textit{Closed}. n^\prime \nprec m$}
+        \For {$n^\prime\in\mathrm{succ}(n)$} 
+        \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
+        \State $\mathbf{n^\prime} \rightarrow \textit{Open}$
+        \EndFor
+      \EndIf
+    \EndWhile
+    \State fail
+  \EndProcedure
+  \end{algorithmic}
+\caption{A version of Skyplan based on uniform cost search.  }
+\label{alg:skyplan}
+\end{algorithm}
+
 \subsection{Algorithm}
 
 Skyplan is a fairly easy modification of a standard
@@ -232,30 +257,6 @@ useful depends on the kinds of search operators being applied: if
 there are many similar successors to a state, this check can prune a very large
 number of states. However, if most actions are very different, it will
 likely have limited effect.
-
-\begin{algorithm}
-  \begin{algorithmic}[1]
-    \Procedure{UCSSkyplan}{$s, G, F, \preceq$}
-    \State Initialize $\textit{Open}=\{\langle s,0\rangle\}$, $\textit{Closed}=\{\}$
-    \While{ \textit{Open} is not empty}
-    \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in \textit{Open}$
-    \State $n\rightarrow \textit{Closed}$
-      \If {$n\in F$} 
-        \State \Return the path to $n$ following back pointers
-      \EndIf
-      \If {$\forall m \in \textit{Open} \cup \textit{Closed}. n^\prime \nprec m$}
-        \For {$n^\prime\in\mathrm{succ}(n)$} 
-        \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
-        \State $\mathbf{n^\prime} \rightarrow \textit{Open}$
-        \EndFor
-      \EndIf
-    \EndWhile
-    \State fail
-  \EndProcedure
-  \end{algorithmic}
-\caption{A version of Skyplan based on uniform cost search.  }
-\label{alg:skyplan}
-\end{algorithm}
 
 \subsection{Compatibility}
 \begin{figure}
@@ -687,7 +688,21 @@ a skyline query for our setting.  In this section, we discuss each
 in turn.
 
 \subsection{Hierarchical \Astar}
-
+\begin{table*}
+	\begin{center}
+		\begin{tabular}{|c|cc|cc|cc|cc|cc|}
+		\hline
+		\multirow{2}{*}{Planner} & \multicolumn{2}{c|}{Problem 1}  & \multicolumn{2}{c|}{Problem 2} & \multicolumn{2}{c|}{Problem 3} & \multicolumn{2}{c|}{Problem 4} & \multicolumn{2}{c|}{Problem 5} \\
+		& Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time \\
+		\hline
+		Hierarchical \Astar & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
+		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & 1,309,482 & 2834 \\
+		\hline
+		\end{tabular}
+	\end{center}
+	\caption{Results on the woodworking domain. Times are in seconds.}
+	\label{tab:woodworking}
+\end{table*}
 While skyline pruning works with any optimal search procedure, this
 pruning method has a particular synergy with the Hierarchical \Astar
 algorithm. Hierarchical \Astar works
@@ -727,6 +742,7 @@ we must make quadratically many checks). In practice, this
 runtime can overwhelm the benefit obtained from pruning the branching factor,
 especially if the number of states pruned is small.
 
+
 However, note that in high dimensions most states are clearly not
 related to one another.  They might both have different positive
 propositions, with one not having strictly more than another.
@@ -747,21 +763,6 @@ in practice it is several orders of magnitude faster.
 \section{Experiments}
 
 
-\begin{table*}
-	\begin{center}
-		\begin{tabular}{|c|cc|cc|cc|cc|cc|}
-		\hline
-		\multirow{2}{*}{Planner} & \multicolumn{2}{c|}{Problem 1}  & \multicolumn{2}{c|}{Problem 2} & \multicolumn{2}{c|}{Problem 3} & \multicolumn{2}{c|}{Problem 4} & \multicolumn{2}{c|}{Problem 5} \\
-		& Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time & Nodes & Time \\
-		\hline
-		Hierarchical \Astar & 732 & 0.148 & 4762 & 1.11 & 19,010 & 4.13 & 260,375 & 129 & 2,620,531 & 1515 \\
-		Skyplan         & 442 & 0.096 & 2615 & 0.76 & 11,709 & 3.58 & 135,675 & ~99 & 1,309,482 & 2834 \\
-		\hline
-		\end{tabular}
-	\end{center}
-	\caption{Results on the woodworking domain. Times are in seconds, and are averaged over 20 runs for problems 1, 2, and 3; over 10 runs for problem 4; and over 5 runs for problem 5.}
-	\label{tab:woodworking}
-\end{table*}
 
 We empirically evaluated Skyplan in two domains. First, we ran experiments on a collection
 of standard job shop tasks from the woodworking domain. We chose this domain because it
@@ -797,12 +798,33 @@ still retains anywhere from a 15\% to a 35\% speed advantage on the first four p
 \subsection{The StarCraft Domain}
 
 StarCraft$^\textrm{\textregistered}$ is a real time strategy game
-created by Blizzard Entertainment, and it is one of the most competitive
+created by Blizzard Entertainment, and one of the most competitive
 and popular games in the world. The game involves the accumulation
 of resources (minerals and gas), which are gathered by workers.
 These resources are then spent to build structures (e.g.\ a barracks),
 which are then in turn used to build military units. The ultimate goal is
-to build an army to defeat an opponent.
+to build an army to defeat an opponent. 
+Skyplan is design to take advantage of this sort of structure,
+suggesting that it will perform very well in this environment.
+
+\begin{table*}
+  \footnotesize
+	\begin{center}
+		\begin{tabular}{|c|ccc|ccc|ccc|ccc|ccc|}
+		\hline
+		\multirow{2}{*}{Planner} & \multicolumn{3}{c|}{7 SCVs}  & \multicolumn{3}{c|}{1 Marine} & \multicolumn{3}{c|}{1 Firebat} & \multicolumn{3}{c|}{1 Marine, 1 Firebat} & \multicolumn{3}{c|}{2 Command Centers} \\
+		& Nodes & Time & Cost & Nodes & Time &Cost & Nodes & Time & Cost & Nodes & Time & Cost & Nodes & Time & Cost\\
+		\hline
+		\Astar 		& 3.1k & 0.27 & 1.0 & 11.7k & 1.34 & 1.0 &*  & * & *& *& *& *& *& *&* \\  
+		Skyplan           & 233 & 0.12 & 1.0 & 405 & 0.22 & 1.0 & 97k & 21.9 & 1.0 & 509k & 393 & 1.0 & 26k & 209 & 1.0 \\
+		Greedy		&  & 0.03 & 1.0 &  & 0.06 & 3.3 &  & 0.06 & 2.4 &  & 0.09 & 2.4 &  & 0.06 & 2.1 \\
+		\hline
+		\end{tabular}
+	\end{center}
+	\caption{Results on the StarCraft domain. Times are in seconds.  Asterisks indicate that \Astar ran out of memory, even with 6GB
+  of RAM. Cost is given as a multiple of the optimal cost.}
+	\label{tab:starcraft}
+\end{table*}
 
 
 There are many aspects of this game that are worth modeling from
@@ -845,17 +867,19 @@ are so critical.\footnote{We will release a PDDL version
 of this specification upon publication.}
 
 \subsubsection{Results in the StarCraft Domain}
-We selected a number of early game units and resource combinations as goals for our planners,
- and compared Skyplan against an \Astar planner and Greedy planner. The Greedy planner determines which 
+We selected a number of early game units and resource combinations as goals for our planners.
+We compared Skyplan against an \Astar planner and a Greedy planner. The Greedy planner determines which 
 structures and units are required to reach the goal and builds the most costly structures first, taking dependencies
-into account.  We compared plan length and total planning time by each algorithm, and further compared the number
-of nodes popped or pruned in Skyplan and \Astar. The implementations of Skyplan and \Astar used in this domain are
-not using Hierarchical implementation discussed above.
+into account.  We compared plan length and total planning time taken by each algorithm, and further compared the number
+of nodes expanded or pruned in Skyplan and \Astar. The implementations of Skyplan and \Astar used in this domain are
+not using the Hierarchical implementation discussed above, but rather a critical path heuristic.
 
-On every problem, Skyplan expands less than 10\% of the nodes that \Astar expands, expanding as few as XX\%. 
-At least 80\% of nodes encountered by Skyplan are pruned without being expanded. In the simplest problems, Skyplan 
-achieves a modest 55\% speedup; on the most complex problems, the speedup is as high as 83\%. In every case, 
-the Greedy Planner discovers a satisficing plan in less than 100ms, but these plans can take up to three times longer than optimal.
+The results are in Table \ref{tab:starcraft}. As mentioned above, the nature of the domain allows for aggressive pruning, reducing the branching factor by as much as 90\%.
+This results in dramatic speedups over \Astar on all problems tested.
+In each experiment, Skyplan expands fewer than 10\% of the nodes that \Astar expands, expanding as few as 4\% as many nodes. 
+In the simplest problems, Skyplan takes half as long as \Astar; on the most complex problems, Skyplan takes less than 2\% the time of \Astar. In every case, the Greedy planner discovers a satisficing plan in less than 100ms, 
+but these plans cost up to three times more than optimal.
+
 
 \section{Conclusion}
 
