@@ -45,8 +45,8 @@ object HierarchicalSkyplan {
     def slurpResource(str: String) =  {
       Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
     }
-    val domainFile = "examples/pddl/woodworking/p03-domain.pddl"
-    val problemFile = "examples/pddl/woodworking/p03.pddl"
+    val domainFile = "examples/pddl/tempo-sat/woodworking/p03-domain.pddl"
+    val problemFile = "examples/pddl/tempo-sat/woodworking/p03.pddl"
     val input = slurpResource(domainFile)
     val input2 = slurpResource(problemFile)
     val domain = PDDL.parseDomain(input)
@@ -71,8 +71,8 @@ object HierarchicalSkyplan {
       Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
     }
     val skyplan = args.length < 1 || args(0).toBoolean
-    val domainFile = if (args.length >= 3) args(1) else "examples/pddl/woodworking/p03-domain.pddl"
-    val problemFile = if (args.length >= 3) args(2) else "examples/pddl/woodworking/p03.pddl"
+    val domainFile = if (args.length >= 3) args(1) else "examples/pddl/tempo-sat/woodworking/p01-domain.pddl"
+    val problemFile = if (args.length >= 3) args(2) else "examples/pddl/tempo-sat/woodworking/p01.pddl"
     val input = slurpResource(domainFile)
     val input2 = slurpResource(problemFile)
     val domain = PDDL.parseDomain(input)

@@ -50,8 +50,8 @@ class HierarchicalSkyplanTest  extends FunSuite {
 
   */
   test("Woodworking 1") {
-    val input = slurpResource("examples/pddl/woodworking/p01-domain.pddl")
-    val input2 = slurpResource("examples/pddl/woodworking/p01.pddl")
+    val input = slurpResource("examples/pddl/tempo-sat/woodworking/p01-domain.pddl")
+    val input2 = slurpResource("examples/pddl/tempo-sat/woodworking/p01.pddl")
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
 

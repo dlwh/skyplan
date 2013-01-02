@@ -16,8 +16,8 @@ class StateTest  extends FunSuite {
   }
 
   test("equals and hashcode work with copy and successors") {
-    val input = slurpResource("examples/pddl/woodworking/p01-domain.pddl")
-    val input2 = slurpResource("examples/pddl/woodworking/p01.pddl")
+    val input = slurpResource("examples/pddl/tempo-sat/woodworking/p01-domain.pddl")
+    val input2 = slurpResource("examples/pddl/tempo-sat/woodworking/p01.pddl")
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
     val instance = ProblemInstance.fromPDDL(domain, problem)
