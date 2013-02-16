@@ -45,6 +45,31 @@
 %}
 \author{}
 
+
+\begin{comment}
+Remaining ``minor comments''
+* Before Claim 3, you could briefly recall the definition of "optimally
+  efficient" and what it means in this particular setting.
+
+* Definitions 3 and 4: In both definitions, part (2) is just the
+  contraposition of (1) and hence implied and unnecessary.
+
+* First paragraph after proof of Claim 4: "In this case, we would not be able
+  to prune based on the number of widgets: its resource would be in R=". Maybe
+  I just don't see it, but shouldn't it be in R+?
+
+* Last paragraph before Def. 6: One of the n's should be an m.
+
+* Could condition 2 of Def. 6 be cast in a more formal way?
+
+
+* Experiments: "The implementations of Skyplan and \Astar used in this domain are
+  not using the Hierarchical implementation discussed above, but rather a
+  critical path heuristic". Why?
+
+\end{comment}
+
+
 \maketitle
 \begin{abstract}
 \begin{quote}
@@ -55,7 +80,7 @@
   and therefore must explore many redundant, clearly suboptimal
   plans. We describe a new optimal search algorithm for planning
   that leverages a partial order relation between states. Under
-  suitable conditions, states that are dominated by another with
+  suitable conditions, states that are dominated by other states with
   respect to this order can be pruned while provably maintaining
   optimality. We also describe a simple method for automatically
   discovering compatible partial orders in both serial and concurrent
@@ -69,6 +94,7 @@
 Planning problems differ from other search problems in a number of
 ways. One important distinction is that there are typically many
 planning states that are ``similar'' along one or more dimensions.
+XXX consider explaining job shop domains.
 For instance, in a job shop scheduling domain, one search state
 might have the same number of widgets---but fewer sprockets---than
 another. Assuming in this example that more is always better and that the two states
@@ -220,7 +246,7 @@ unlike expansion cores in our system.
       \If {$n\in F$} 
         \State \Return the path to $n$ following back pointers
       \EndIf
-      \If {$\forall m \in \textit{Open} \cup \textit{Closed}. n^\prime \nprec m$}
+      \If {$\forall m \in \textit{Open} \cup \textit{Closed}. n \nprec m$}
         \For {$n^\prime\in\mathrm{succ}(n)$} 
         \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
         \State $\mathbf{n^\prime} \rightarrow \textit{Open}$
@@ -266,7 +292,7 @@ likely have limited effect.
   \caption{Abstract representation of search with compatible partial
   orders. The shaded area represents the goal region. Both $m$ and $n$ are reachable from the start state.
   Because $m$ is a better state than $n$, and $m$'s successors
-  ``stay ahead'' of $n$'s, we can safely avoid expanding $n$ while
+  ``stay ahead'' of $n$'s, we can safely avoid expanding $m$ while
   still preserving optimality.}
   \label{fig:compatibility}
 \end{figure}
@@ -279,7 +305,7 @@ under which a partial order is \textit{compatible} with a search graph.
 While a broad class of partial orders might work, we have identified
 a property that is especially applicable to planning problems.
 Figure \ref{fig:compatibility} illustrates 
-compatibility for a simple graph. If our goal is accumulate at
+compatibility for a simple graph. If our goal is to accumulate at
 least 18 widgets, then $n$ is clearly better than $m$ as
 it has more widgets in less time. Moreover, none
 of $m$'s successors reach a point better than all of $n$'s 
@@ -293,8 +319,8 @@ We formalize this intuition as follows:
   A partial order $\prec$ is \textit{compatible} if for all states $m \preceq n$,
   \begin{enumerate}
     \item $g(n) \le g(m)$, and 
-    \item $\forall m^\prime \in \mathrm{succ(m)}$ $\exists n^\prime \in
-      \mathrm{succ}(n^\prime)$ such that $m^\prime \preceq n^\prime$ and
+    \item $\forall m^\prime \in \mathrm{succ}(m)$ $\exists n^\prime \in
+      \mathrm{succ}(n)$ such that $m^\prime \preceq n^\prime$ and
       $\mathrm{cost}(m,m^\prime) \ge \mathrm{cost}(n, n^\prime)$, and
     \item If $m \in F$, then $n \in F$
   \end{enumerate}
@@ -306,8 +332,8 @@ case that $n$ is no cheaper than $m$ and that $m$'s successors
 to $\preceq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
-states $m$ and $n$.
-
+states $m$ and $n$ with $m \ne n$. XXX maybe comment on whether a trivial partial
+order need exist
 
 
 In planning problems, defining a compatible partial order is usually
@@ -330,7 +356,7 @@ we prove a useful lemma.
   Let $p$ be a path to a goal, let $m$ be one state in $p$, and let 
 $p_{m:}$ be the suffix of the path starting from $m$, and $|p|$
 be
-the length of a path in terms of the number of states. If $n$ is a state
+the length of $p$ in terms of the number of states. If $n$ is a state
 with $m \preceq n$, then there is a corresponding path $q$ that reaches a goal state
 through $n$ with $|q_{n:}| \leq |p_{m:}|$ and $\mathrm{cost}(q) \leq \mathrm{cost}(p)$.
 \end{lemma}
@@ -361,10 +387,10 @@ is \emph{complete}.
 \begin{proof}
 Suppose otherwise, then all paths to all goals must
 have been pruned. This would require a cycle of paths pruning each other: 
-paths $p^{1},\dots,p^{k}$ such that $p^{i+1}$ was pruned by $p^{i}$ (letting $p^{0}=p^{k}$) .
-For all paths, let $n_{i+1} \in p^{i+1}$ be the state which pruned $p^{i}$ and
+paths $p^{1},\dots,p^{k}$ such that $p^{ (i+1) \mod k}$ was pruned by $p^{i }$.
+For all paths, let $n_{(i+1) \mod k} \in p^{(i+1)}$ be the state which pruned $p^{i}$ and
 $m_{i} \in p^{i}$ the corresponding state which was pruned 
-($\forall i: m_{i} \preceq n_{i+1}$).
+($\forall i: m_{i} \preceq n_{(i+1) \mod k}$).
 
 Because each $m_{i}$ was pruned before being expanded,
 $n_{i} \neq m_{i}$ nor any state succeeding $m_{i}$ in $p^{i}_{m_{i}:}$.
@@ -407,7 +433,7 @@ Suppose otherwise. Then, there must exist an optimal algorithm B and a search pr
 on which B expands (calls the successor function on) strictly fewer states than Skyplan. 
 Let $n^{*}$ be a state expanded in Skyplan but not by B on the problem $(G,\preceq)$, and let
 $f_{B}$ be the goal state returned by B. We construct a new graph $G^\prime$ by adding a single goal state $f^*$ to $G$ 
-and an associated edge from $n^*$ to $f^*$ of cost $\epsilon$ (with $\epsilon < g(f^*)-g(n^*)$). 
+and an associated edge from $n^*$ to $f^*$ of cost $\epsilon$ (with $\epsilon < g(f_B)-g(n^*)$). 
 On $G^\prime$ we apply the original partial order $\preceq$ with $n \npreceq m$ if either $n$ or $m$ is $f^*$.
 
 We must show that $\preceq$ is compatible on $G^\prime$. 
@@ -531,7 +557,7 @@ in mind, we can define the partial order $\po$:
 	
 	To verify condition 3 of Definition~\ref{def-compatibility},
   we only need to consider resources $r$ for which the goal
-  test is $r$-dependents, as changes in other resources will
+  test is $r$-dependent, as changes in other resources will
   not affect the outcome of the test. If the goal test is
   $r$-positive, then $r \in R^+$ or $r \in R^=$, so $m(r) \le n(r)$. If the goal test is $r$-negative, then $r \in R^-$ or $r \in R^=$, so $m(r) \ge n(r)$. If the goal test is neither (but is $r$-dependent), then $r \in R^=$, so $m(r) = n(r)$. Taken together, these conditions ensure that $n \in F \Rightarrow m \in F$.
 	
@@ -556,7 +582,7 @@ fact hit the limit, we then have to re-enqueue all nodes pruned
 based on widget count, and back off to the safer partial order.
 
 Second, it may not be the best ordering for a given problem. Consider
-a domain in which we need can use sprockets to make a transmogrifier,
+a domain in which we can use sprockets to make a transmogrifier,
 but not widgets. However, suppose there is a free conversion from
 widgets to sprockets, and vice versa---because sprockets are in
 fact just upside-down widgets. In this case, sprockets and widgets
@@ -735,7 +761,7 @@ or are for fairly low dimensional states~\citep{KossmannRR02}, and
 so they are not useful here.
 
 The obvious, na\"ive solution is to maintain a list of all elements
-in the current the skyline, and to check all of these elements when
+in the current skyline, and to check all of these elements when
 deciding whether or not to add an element to the skyline. Unfortunately,
 this check is clearly linear in the number of states (which means
 we must make quadratically many checks). In practice, this
@@ -751,7 +777,7 @@ by having a list of sets, one for each resource or proposition,
 that contains all states in the skyline that have a positive value
 for that resource if the resource is in $R^+$, and
 vice versa if negative. Then, when deciding whether or not a new
-state is dominated, we can simple intersect these sets, and then
+state is dominated, we can simply intersect these sets, and then
 run the check on those states in the intersection. Because most
 states in practice are dominated by very few (or sometimes no)
 states, this intersection is much smaller than the entire skyline.
@@ -804,7 +830,7 @@ of resources (minerals and gas), which are gathered by workers.
 These resources are then spent to build structures (e.g.\ a barracks),
 which are then in turn used to build military units. The ultimate goal is
 to build an army to defeat an opponent. 
-Skyplan is design to take advantage of this sort of structure,
+Skyplan is designed to take advantage of this sort of structure,
 suggesting that it will perform very well in this environment.
 
 \begin{table*}
@@ -888,7 +914,7 @@ search-based planners, but by restricting attention to only those states that co
 conceivably be part of an optimal plan, Skyplan can efficiently solve problems that
 \Astar alone could not solve. Furthermore, since
 geometrically pruning the state space achieves speedups in a way that is orthogonal to
-heuristic domain knowledge, this gain should stack well with improved A* approaches. There
+heuristic domain knowledge, this gain should stack well with improved \Astar approaches. There
 is overhead introduced by the optimality-preserving skyline, but further innovations in
 data structures for state space pruning could obviate this problem, perhaps trading
 guaranteed optimality for improvements in asymptotic complexity.
