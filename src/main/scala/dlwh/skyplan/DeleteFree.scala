@@ -65,6 +65,7 @@ object DeleteFree {
     case e: NotCondition => TrueCondition
     case TrueCondition => TrueCondition
     case e: PredicateCondition => e
+    case e: ConstPredicateCondition => e
   }
 
 }

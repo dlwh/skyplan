@@ -71,17 +71,17 @@ object HierarchicalSkyplan {
       Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
     }
     val skyplan = args.length < 1 || args(0).toBoolean
-    val domainFile = if (args.length >= 3) args(1) else "examples/pddl/tempo-sat/woodworking/p01-domain.pddl"
-    val problemFile = if (args.length >= 3) args(2) else "examples/pddl/tempo-sat/woodworking/p01.pddl"
+    val domainFile = if (args.length >= 3) args(1) else "examples/pddl/tempo-sat/woodworking/p03-domain.pddl"
+    val problemFile = if (args.length >= 3) args(2) else "examples/pddl/tempo-sat/woodworking/p03.pddl"
     val input = slurpResource(domainFile)
     val input2 = slurpResource(problemFile)
     val domain = PDDL.parseDomain(input)
     val problem = PDDL.parseProblem(input2)
 
     if(skyplan) {
-      println("Skyplan!" + domainFile)
+      println("Skyplan! " + problemFile)
     } else {
-      println("A*" + problemFile)
+      println("A* " + problemFile)
     }
 
     def average(seq: IndexedSeq[Double]) = {

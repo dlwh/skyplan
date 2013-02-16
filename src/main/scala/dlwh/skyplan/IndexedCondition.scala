@@ -15,27 +15,32 @@ sealed trait IndexedCondition {
 object IndexedCondition {
   def fromCondition(cond: PDDL.Condition,
                     preds: Grounding[String],
-                 valFunctions: Index[String],
-                 locals: Index[String],
-                 globals: Index[String]):IndexedCondition = {
+                    constPreds: Grounding[String],
+                    resources: Index[String],
+                    constResources: Index[String],
+                    locals: Index[String],
+                    globals: Index[String]):IndexedCondition = {
     def rec(cond: PDDL.Condition, varBindings: Index[String]):IndexedCondition =  {
       try {
         cond match {
           case PDDL.TimedCondition(Start, base) =>
-            fromCondition(base, preds, valFunctions, locals, globals)
+            fromCondition(base, preds, constPreds, resources, constResources, locals, globals)
           case PDDL.AndCondition(conjuncts) =>
             AndCondition(conjuncts.map(rec(_, varBindings)))
           case PDDL.FComp(comp, arg1, arg2) =>
             BinaryCompCondition(comp,
-              Expression.fromValExp(arg1, valFunctions, varBindings, globals),
-              Expression.fromValExp(arg2, valFunctions, varBindings, globals))
+              Expression.fromValExp(arg1, resources, constResources, varBindings, globals),
+              Expression.fromValExp(arg2, resources, constResources, varBindings, globals))
           case PDDL.RComp(arg1, arg2) =>
             CellEqualCondition(
               CellExpression.fromRefExp(arg1, varBindings, globals),
               CellExpression.fromRefExp(arg2, varBindings, globals))
           case PDDL.Pred(name, args) =>
             val predIndex = preds.index(name)
-            PredicateCondition(predIndex, args.map(CellExpression.fromRefExp(_, varBindings, globals)))
+            if(predIndex >= 0)
+              PredicateCondition(predIndex, args.map(CellExpression.fromRefExp(_, varBindings, globals)))
+            else
+              ConstPredicateCondition(constPreds.index(name), args.map(CellExpression.fromRefExp(_, varBindings, globals)))
 
         }
       } catch {
@@ -137,6 +142,21 @@ case class PredicateCondition(predicateId: Int, args: IndexedSeq[CellExpression]
   def computeMissingSummary(state: State): ResourceSummary = {
     if(holds(state, state.makeContext())) ResourceSummary.empty
     else resourceSummary(state.problem, IndexedSeq.empty)
+  }
+}
+
+
+case class ConstPredicateCondition(predicateId: Int, args: IndexedSeq[CellExpression]) extends IndexedCondition {
+  def holds(s: State, context: EvalContext): Boolean = {
+    s.problem.constAxioms(s.problem.constantPredicates.ground(predicateId, args.map(_.cell(context))))
+  }
+
+  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
+    ResourceSummary.empty
+  }
+
+  def computeMissingSummary(state: State): ResourceSummary = {
+    ResourceSummary.empty
   }
 }
 

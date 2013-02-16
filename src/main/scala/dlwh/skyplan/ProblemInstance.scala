@@ -103,6 +103,10 @@ case class State(problem: ProblemInstance,
     def updateResource(fn: Int, args: IndexedSeq[Int], v: Double) {
       resources(problem.valFuns.ground(fn, args)) = v
     }
+
+    def constResource(fn: Int, args: IndexedSeq[Int]): Double =  {
+      problem.constResourceValues(problem.valConstants.ground(fn, args))
+    }
   }
 
   def cost = problem.metric(this)
@@ -140,11 +144,15 @@ case class State(problem: ProblemInstance,
  */
 case class ProblemInstance(objects: GroundedObjects,
                            predicates: Grounding[String],
+                           constantPredicates: Grounding[String],
                            actions: Grounding[IndexedAction],
                            valFuns: Grounding[String],
+                           valConstants: Grounding[String],
                            metricExp: ValExpression,
                            goal: IndexedCondition,
-                           initEffect: IndexedEffect) {
+                           initEffect: IndexedEffect,
+                           constAxioms: BitSet,
+                           constResourceValues: HashVector[Double]) {
 
   lazy val totalTimeIndex = valFuns.index("total-time")
 
@@ -241,6 +249,7 @@ case class Grounding[T](index: Index[T],
 object ProblemInstance {
 
 
+
   def fromPDDL(domain: Domain,
                problem: Problem) = {
     // "object" is common root type.
@@ -250,29 +259,81 @@ object ProblemInstance {
     val instancesByType: Array[BitSet] = populateTypeSets(problem, domain, types, objects)
     val objs = GroundedObjects(types, objects, instancesByType)
 
-    val propositions = groundPropositions(domain.predicates, objs)
-    val resources = groundFluents(domain.functions, objs)
-    val actions = indexActions(domain.actions, objs, propositions, resources)
+    val (preds, constPreds) = partitionConstantPredicates(problem, domain)
+    val (functions, constFunctions) = partitionConstantResources(problem, domain)
+
+    val propositions = groundPropositions(preds, objs)
+    val constantPropositions = groundPropositions(constPreds, objs)
+    val resources = groundFluents(functions, objs)
+    val constantResources = groundFluents(constFunctions, objs)
+    val actions = indexActions(domain.actions, objs, propositions, constantPropositions, resources, constantResources)
 
     val metric = problem.metric.map{ case PDDL.MetricSpec(dir, exp) =>
-      val base = Expression.fromValExp(exp, resources.index, Index[String](), objs.index)
+      val base = Expression.fromValExp(exp, resources.index, constantResources.index, Index[String](), objs.index)
       if(dir == PDDL.Maximize)
         Expression.Negation(base)
       else
         base
     }.getOrElse(Expression.Number(0))
 
-    val init = IndexedEffect.fromEffect(problem.initialState, Index[String](), objs,  resources, propositions)
-    val goal = IndexedCondition.fromCondition(problem.goal, propositions, resources.index, Index[String](), objs.index)
+    val init = IndexedEffect.fromEffect(problem.initialState, Index[String](), objs,  resources, constantResources, propositions, constantPropositions, ignoreSettingConstants = true)
+    val (constAxioms, constResourceValues) = IndexedEffect.getConstantValues(problem.initialState, Index[String], objs, resources, constantResources, propositions, constantPropositions)
+    val goal = IndexedCondition.fromCondition(problem.goal, propositions, constantPropositions, resources.index, constantResources.index, Index[String](), objs.index)
 
-    new ProblemInstance(objs, propositions, actions, resources, metric, goal, init)
+    new ProblemInstance(objs, propositions, constantPropositions, actions, resources, constantResources, metric, goal, init, constAxioms, constResourceValues)
 
   }
 
-  def indexActions(map: Map[String, Action], objs: GroundedObjects, props: Grounding[String], resources: Grounding[String]) = {
+  // Returns (predicates that might change, predicates that will definitely not change)
+  def partitionConstantPredicates(problem: Problem, domain: Domain) = {
+    val mutablePredicates = domain.actions.values.flatMap { action =>
+      action.effect.iterator.flatMap(getModifiedPredicates _)
+    }.toSet
+
+    domain.predicates.partition(kv => mutablePredicates(kv._1))
+  }
+
+  // Returns (resources that might change, resources that will definitely not change)
+  def partitionConstantResources(problem: Problem, domain: Domain) = {
+    val mutableResources = domain.actions.values.flatMap { action =>
+      action.effect.iterator.flatMap(getModifiedResources _)
+    }.toSet
+
+    domain.functions.partition(kv => mutableResources(kv._1))
+  }
+
+
+  import PDDL._
+  private def getModifiedPredicates(effect: Effect):Set[String] = effect match {
+    case PDDL.AndEffect(conjuncts) => conjuncts.map(getModifiedPredicates _).reduceLeft(_ ++ _)
+    case UniversalEffect(_, eff) => getModifiedPredicates(eff)
+    case TimedEffect(_, eff) => getModifiedPredicates(eff)
+    case EnablePred(p) => Set(p.predicate)
+    case DisablePred(p) => Set(p.predicate)
+    case AssignEffect(_, _, _) => Set.empty
+    case CondEffect(cond, eff) => getModifiedPredicates(eff)
+  }
+
+  private def getModifiedResources(effect: Effect):Set[String] = effect match {
+    case AndEffect(conjuncts) => conjuncts.map(getModifiedResources _).reduceLeft(_ ++ _)
+    case UniversalEffect(_, eff) => getModifiedResources(eff)
+    case TimedEffect(_, eff) => getModifiedResources(eff)
+    case EnablePred(p) => Set.empty
+    case DisablePred(p) => Set.empty
+    case AssignEffect(_, lhs, _) => Set(lhs.name)
+    case CondEffect(cond, eff) => getModifiedResources(eff)
+  }
+
+
+  def indexActions(map: Map[String, Action],
+                   objs: GroundedObjects,
+                   props: Grounding[String],
+                   constProps: Grounding[String],
+                   resources: Grounding[String],
+                   constResources: Grounding[String]) = {
     import objs._
     val indexed = for( (name, a) <- map.toIndexedSeq) yield {
-      IndexedAction.fromAction(a, Index[String](), objs, props, resources)
+      IndexedAction.fromAction(a, Index[String](), objs, props, constProps, resources, constResources)
     }
 
 

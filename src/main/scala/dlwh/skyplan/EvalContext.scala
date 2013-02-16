@@ -1,6 +1,7 @@
 package dlwh.skyplan
 
 trait EvalContext { outer =>
+
   /**
    * Returns the ground number of the object referenced by the
    * i'th local varioable. Maintained as a stack, basically.
@@ -9,6 +10,7 @@ trait EvalContext { outer =>
    */
   def local(i: Int):Int
   def resource(fn: Int, args: IndexedSeq[Int]): Double
+  def constResource(fn: Int, args: IndexedSeq[Int]): Double
   def numLocals: Int
 
 
@@ -16,9 +18,7 @@ trait EvalContext { outer =>
 
   def addLocals(bindings: Array[Int]):EvalContext = new EvalContext {
     /**
-     * Returns the ground number of the
-     * @param i
-     * @return
+     * Returns the ground number of the i'th local variable. i.e. its global index
      */
     def local(i: Int): Int = {
       if(i < outer.numLocals) {
@@ -37,6 +37,7 @@ trait EvalContext { outer =>
       outer.updateResource(fn, args, v)
 
     }
+    def constResource(fn: Int, args: IndexedSeq[Int]): Double = outer.constResource(fn, args)
 
     def updateCell(fn: Int, args: IndexedSeq[Int], v: Int) {
       outer.updateResource(fn, args, v)
@@ -46,15 +47,10 @@ trait EvalContext { outer =>
 
 object EvalContext {
   def onlyLocals(lcls: IndexedSeq[Int]):EvalContext = new EvalContext {
-    /**
-     * Returns the ground number of the object referenced by the
-     * i'th local varioable. Maintained as a stack, basically.
-     * @param i
-     * @return
-     */
     def local(i: Int): Int = lcls(i)
 
     def resource(fn: Int, args: IndexedSeq[Int]): Double = 0.0
+    def constResource(fn: Int, args: IndexedSeq[Int]): Double = 0.0
 
     def numLocals: Int = lcls.length
 

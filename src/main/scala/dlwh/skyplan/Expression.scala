@@ -52,21 +52,28 @@ object CellExpression {
 object Expression {
 
   def fromValExp(fexp: ValExp,
-               valFunctions: Index[String],
+               resources: Index[String],
+               constResources: Index[String],
                locals: Index[String],
                globals: Index[String]):ValExpression = fexp match {
     case FApplication(name, args) =>
-      val fn = valFunctions(name)
-      if (fn < 0) throw new ExpressionException("Unknown function " + name)
-      Resource(fn, args.map(CellExpression.fromRefExp(_, locals, globals)))
+      val fn = resources(name)
+      if (fn < 0) {
+        val fn2 = constResources(name)
+        if(fn2 < 0)
+          throw new ExpressionException("Unknown function " + name)
+        ConstResource(fn2, args.map(CellExpression.fromRefExp(_, locals, globals)))
+      } else {
+        Resource(fn, args.map(CellExpression.fromRefExp(_, locals, globals)))
+      }
     case BinaryExp(op, lhs, rhs) =>
-      Binary(op, fromValExp(lhs, valFunctions, locals, globals), fromValExp(rhs, valFunctions, locals, globals))
+      Binary(op, fromValExp(lhs, resources, constResources, locals, globals), fromValExp(rhs, resources, constResources, locals, globals))
     case MultiExp(op, args) =>
-      Multi(op, args.map(fromValExp(_, valFunctions, locals, globals)))
+      Multi(op, args.map(fromValExp(_, resources, constResources, locals, globals)))
     case PDDL.Number(num) =>
       Number(num)
     case PDDL.Negation(arg) =>
-      Negation(fromValExp(arg, valFunctions, locals, globals))
+      Negation(fromValExp(arg, resources, constResources, locals, globals))
   }
 
 
@@ -113,6 +120,25 @@ object Expression {
      */
     def getResourceSigns(inst: ProblemInstance, context: IndexedSeq[Int]): (BitSet, BitSet) = {
       (BitSet.empty ++ possibleGroundings(inst, context), BitSet.empty)
+    }
+  }
+
+  case class ConstResource(fn: Int, args: IndexedSeq[CellExpression]) extends ValExpression {
+    assert(fn >= 0, fn)
+    def valueWith(context: EvalContext) = context.constResource(fn, args.map(a => a.cell(context)))
+    def update(context: EvalContext, v: Double) = error("Can't update constant resource!")
+    def possibleSignWithArgs(context: EvalContext): Option[Int] = None
+
+    def possibleGroundings(inst: ProblemInstance, locals: IndexedSeq[Int]):IndexedSeq[Int] = {
+      val argumentChoices = args.map {
+        case Global(v, _) => IndexedSeq(v)
+        case Local(v, _) => IndexedSeq(locals(v))
+      }
+      Util.allArgumentListsForChoices(argumentChoices).map(inst.valConstants.ground(fn, _))
+    }
+
+    def getResourceSigns(inst: ProblemInstance, context: IndexedSeq[Int]): (BitSet, BitSet) = {
+      (BitSet.empty, BitSet.empty)
     }
   }
 

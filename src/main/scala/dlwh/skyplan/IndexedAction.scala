@@ -30,15 +30,17 @@ object IndexedAction {
                  standardLocals: Index[String],
                  objs: GroundedObjects,
                  props: Grounding[String],
-                 resources: Grounding[String]) = {
+                 constProps: Grounding[String],
+                 resources: Grounding[String],
+                 constResources: Grounding[String]) = {
     val locals = Index(a.args.map(_.name))
-    val prec = a.precondition.map(IndexedCondition.fromCondition(_, props, resources.index, locals, objs.index))
+    val prec = a.precondition.map(IndexedCondition.fromCondition(_, props, constProps, resources.index, constResources.index, locals, objs.index))
     val duration = a.duration.map {
-      case PDDL.StandardDuration(comp, value) => Expression.fromValExp(value, resources.index, locals, objs.index)
+      case PDDL.StandardDuration(comp, value) => Expression.fromValExp(value, resources.index, constResources.index, locals, objs.index)
     }
 
 
-    val effect = a.effect.map(IndexedEffect.fromEffect(_, locals, objs, resources, props)).getOrElse(NoEffect)
+    val effect = a.effect.map(IndexedEffect.fromEffect(_, locals, objs, resources, constResources, props, constProps)).getOrElse(NoEffect)
 
     new IndexedAction(a.name, a.args.map(a => objs.types(a.tpe)), prec, effect, duration)
   }

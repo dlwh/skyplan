@@ -164,6 +164,9 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
           def numLocals = actionArgs.size
 
           def resource(fn: Int, args: IndexedSeq[Int]) = 0.0
+
+          def constResource(fn: Int, args: IndexedSeq[Int]): Double = 0.0
+
           def updateResource(fn: Int, args: IndexedSeq[Int], v: Double) {}
           def cell(fn: Int, args: IndexedSeq[Int]) = -1
           def updateCell(fn: Int, args: IndexedSeq[Int], v: Int) {}

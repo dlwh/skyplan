@@ -5,6 +5,7 @@ import dlwh.skyplan.Expression.Resource
 import dlwh.skyplan.PDDL.{AssignEffect, Effect}
 import breeze.util.Index
 import breeze.linalg.Axis._0
+import breeze.linalg.HashVector
 
 
 sealed trait IndexedEffect {
@@ -25,22 +26,41 @@ object IndexedEffect {
   def fromEffect(effect: Effect,
                  locals: Index[String],
                  objs: GroundedObjects,
-                 valFunctions: Grounding[String],
-                 preds: Grounding[String]):IndexedEffect = {
+                 resources: Grounding[String],
+                 constResources: Grounding[String],
+                 preds: Grounding[String],
+                 constPreds: Grounding[String],
+                 ignoreSettingConstants: Boolean=false):IndexedEffect = {
     def rec(eff: Effect, varBindings: Index[String]):IndexedEffect = eff match {
       case PDDL.AndEffect(xs) =>
         val recs = xs.map(rec(_,varBindings))
         AndEffect(recs)
       case PDDL.DisablePred(pred) =>
         val predIndex = preds.index(pred.predicate)
-        DisableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, varBindings, objs.index)))
+        if(predIndex < 0)
+          if(ignoreSettingConstants)
+            NoEffect
+          else throw new RuntimeException("Not a dynamic predicate: " + pred)
+        else DisableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, varBindings, objs.index)))
       case PDDL.EnablePred(pred) =>
         val predIndex = preds.index(pred.predicate)
-        EnableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, varBindings, objs.index)))
+        if(predIndex < 0)
+          if(ignoreSettingConstants)
+            NoEffect
+          else throw new RuntimeException("Not a dynamic predicate: " + pred)
+        else EnableDynamicPredicate(predIndex, pred.args.map(CellExpression.fromRefExp(_, varBindings, objs.index)))
       case ae@AssignEffect(op, lhs, rhs) =>
-        val lcell = Expression.fromValExp(lhs, valFunctions.index, varBindings, objs.index)
-        val rcell = Expression.fromValExp(rhs, valFunctions.index, varBindings, objs.index)
-        AssignToResource(op, lcell.asInstanceOf[Expression.Resource],  rcell)
+        if(constResources.index(lhs.name) >= 0) {
+          if(ignoreSettingConstants)
+            NoEffect
+          else {
+            throw new RuntimeException("Not a dynamic resource: " + lhs)
+          }
+        } else {
+          val lcell = Expression.fromValExp(lhs, resources.index, constResources.index, varBindings, objs.index)
+          val rcell = Expression.fromValExp(rhs, resources.index, constResources.index, varBindings, objs.index)
+          AssignToResource(op, lcell.asInstanceOf[Expression.Resource],  rcell)
+        }
       case PDDL.UniversalEffect(args, eff) =>
         val extended = Index(varBindings ++ args.map(_.name))
         UniversalEffect(objs.allGroundingsOfArgumentTypes(args.map(_.tpe)).map(_.toArray), rec(eff, extended))
@@ -48,11 +68,64 @@ object IndexedEffect {
         val a = rec(arg, varBindings)
         new TimedEffect(spec, a)
       case PDDL.CondEffect(guard, arg) =>
-        val ig = IndexedCondition.fromCondition(guard, preds, valFunctions.index, varBindings, objs.index)
+        val ig = IndexedCondition.fromCondition(guard, preds, constPreds, resources.index, constResources.index, varBindings, objs.index)
         val a = rec(arg, varBindings)
         new CondEffect(ig, a)
     }
     rec(effect, locals)
+  }
+
+  def getConstantValues(effect: Effect,
+                        locals: Index[String],
+                        objs: GroundedObjects,
+                        resources: Grounding[String],
+                        constResources: Grounding[String],
+                        preds: Grounding[String],
+                        constPreds: Grounding[String]):(BitSet, HashVector[Double]) = {
+    val resourceCounts = HashVector.zeros[Double](constResources.size)
+    val set = collection.mutable.BitSet.empty
+    def rec(eff: Effect, varBindings: Index[String]):Unit = eff match {
+      case PDDL.AndEffect(xs) =>
+         xs.foreach(rec(_,varBindings))
+      case PDDL.EnablePred(pred) =>
+        val predIndex = constPreds.index(pred.predicate)
+        if (predIndex >= 0) {
+          val predExprs = pred.args.map(CellExpression.fromRefExp(_, varBindings, objs.index))
+          set += constPreds.ground(predIndex, predExprs.map(_.cell(EvalContext.emptyContext)))
+        }
+      case ae@AssignEffect(op, lhs, rhs) =>
+        val predIndex = constResources.index(lhs.name)
+        if(predIndex >= 0) {
+          val rcell = Expression.fromValExp(rhs, resources.index, constResources.index, varBindings, objs.index)
+          val context = EvalContext.emptyContext
+          val predExprs = lhs.args.map(CellExpression.fromRefExp(_, varBindings, objs.index))
+          val resource = constResources.ground(predIndex, predExprs.map(_.cell(context)))
+          val exp = rcell.valueWith(context)
+          op match {
+            case Assign =>
+              if(exp != 0)
+                resourceCounts(resource) = exp
+            case Increase =>
+              if(exp != 0)
+                resourceCounts(resource) += exp
+            case Decrease =>
+              if(exp != 0)
+                resourceCounts(resource) -= exp
+            case ScaleUp =>
+              if(exp != 1)
+                resourceCounts(resource) *= exp
+            case ScaleDown =>
+              if(exp != 1)
+                resourceCounts(resource) /= exp
+          }
+        }
+      case _ =>
+        throw new RuntimeException("Not a valid effect for initial effect: " + eff)
+    }
+
+    rec(effect, locals)
+
+    BitSet.empty ++ set -> resourceCounts
   }
 }
 
@@ -67,10 +140,6 @@ case class EnableMultiple(preds: BitSet) extends IndexedEffect {
     state.axioms |= preds
   }
 
-  /**
-   * Returns
-   * @param args
-   */
   def possibleDelta(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = ResourceSummary(addedAxioms = preds)
 }
 
