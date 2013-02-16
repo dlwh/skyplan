@@ -8,7 +8,7 @@ import collection.immutable.BitSet
 sealed trait IndexedCondition {
 
   def holds(s: State, context: EvalContext):Boolean
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary
   def computeMissingSummary(state: State): ResourceSummary
 }
 
@@ -26,7 +26,7 @@ object IndexedCondition {
           case PDDL.TimedCondition(Start, base) =>
             fromCondition(base, preds, constPreds, resources, constResources, locals, globals)
           case PDDL.AndCondition(conjuncts) =>
-            AndCondition(conjuncts.map(rec(_, varBindings)))
+            AndCondition(conjuncts.toArray.map(rec(_, varBindings)))
           case PDDL.FComp(comp, arg1, arg2) =>
             BinaryCompCondition(comp,
               Expression.fromValExp(arg1, resources, constResources, varBindings, globals),
@@ -38,9 +38,9 @@ object IndexedCondition {
           case PDDL.Pred(name, args) =>
             val predIndex = preds.index(name)
             if(predIndex >= 0)
-              PredicateCondition(predIndex, args.map(CellExpression.fromRefExp(_, varBindings, globals)))
+              PredicateCondition(predIndex, args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))
             else
-              ConstPredicateCondition(constPreds.index(name), args.map(CellExpression.fromRefExp(_, varBindings, globals)))
+              ConstPredicateCondition(constPreds.index(name), args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))
 
         }
       } catch {
@@ -53,29 +53,29 @@ object IndexedCondition {
   }
 }
 
-case class AndCondition(conjuncts: IndexedSeq[IndexedCondition]) extends IndexedCondition {
+case class AndCondition(conjuncts: Array[IndexedCondition]) extends IndexedCondition {
   def holds(s: State, context: EvalContext):Boolean = {
     conjuncts.forall(_.holds(s,context))
   }
 
 
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = conjuncts.map(_.resourceSummary(inst, args)).reduce( _ ++ _ )
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = conjuncts.map(_.resourceSummary(inst, args)).reduce( _ ++ _ )
 
   def computeMissingSummary(state: State): ResourceSummary = conjuncts.map(_.computeMissingSummary(state)).reduce(_ ++ _)
 }
 
-case class OrCondition(disjuncts: IndexedSeq[IndexedCondition]) extends IndexedCondition {
+case class OrCondition(disjuncts: Array[IndexedCondition]) extends IndexedCondition {
   def holds(s: State, context: EvalContext):Boolean = {
     disjuncts.exists(_.holds(s,context))
   }
 
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = {
     disjuncts.map(_.resourceSummary(inst, args)).reduce(_ ++ _)
   }
 
   def computeMissingSummary(state: State): ResourceSummary = {
     if(!holds(state, state.makeContext())) ResourceSummary.empty
-    else resourceSummary(state.problem, IndexedSeq.empty)
+    else resourceSummary(state.problem, Array.empty)
   }
 }
 
@@ -85,13 +85,13 @@ case class NotCondition(base: IndexedCondition) extends IndexedCondition {
   }
 
 
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = {
     base.resourceSummary(inst, args).flip
   }
 
   def computeMissingSummary(state: State): ResourceSummary = {
     if(!holds(state, state.makeContext())) ResourceSummary.empty
-    else resourceSummary(state.problem, IndexedSeq.empty)
+    else resourceSummary(state.problem, Array.empty)
   }
 }
 
@@ -100,7 +100,7 @@ case class BinaryCompCondition(op: BinaryComp, lhs: ValExpression, rhs: ValExpre
     op(lhs.valueWith(context), rhs.valueWith(context))
   }
 
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = {
     val (lhsPos, lhsNeg) = lhs.getResourceSigns(inst, args)
     val (rhsPos, rhsNeg) = rhs.getResourceSigns(inst, args)
     op match {
@@ -116,7 +116,7 @@ case class BinaryCompCondition(op: BinaryComp, lhs: ValExpression, rhs: ValExpre
 
   def computeMissingSummary(state: State): ResourceSummary = {
     if(holds(state, state.makeContext())) ResourceSummary.empty
-    else resourceSummary(state.problem, IndexedSeq.empty)
+    else resourceSummary(state.problem, Array.empty)
   }
 }
 
@@ -124,34 +124,34 @@ case class CellEqualCondition(lhs: CellExpression, rhs: CellExpression) extends 
   def holds(s: State, context: EvalContext): Boolean = {
     lhs.cell(context) == rhs.cell(context)
   }
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = ResourceSummary.empty
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = ResourceSummary.empty
 
   def computeMissingSummary(state: State): ResourceSummary = ResourceSummary.empty
 }
 
-case class PredicateCondition(predicateId: Int, args: IndexedSeq[CellExpression]) extends IndexedCondition {
+case class PredicateCondition(predicateId: Int, args: Array[CellExpression]) extends IndexedCondition {
   def holds(s: State, context: EvalContext): Boolean = {
     s.axioms(s.problem.predicates.ground(predicateId, args.map(_.cell(context))))
   }
 
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = {
     val context = EvalContext.onlyLocals(args)
     ResourceSummary(addedAxioms=BitSet(inst.predicates.ground(predicateId, this.args.map(_.cell(context)))))
   }
 
   def computeMissingSummary(state: State): ResourceSummary = {
     if(holds(state, state.makeContext())) ResourceSummary.empty
-    else resourceSummary(state.problem, IndexedSeq.empty)
+    else resourceSummary(state.problem, Array.empty)
   }
 }
 
 
-case class ConstPredicateCondition(predicateId: Int, args: IndexedSeq[CellExpression]) extends IndexedCondition {
+case class ConstPredicateCondition(predicateId: Int, args: Array[CellExpression]) extends IndexedCondition {
   def holds(s: State, context: EvalContext): Boolean = {
     s.problem.constAxioms(s.problem.constantPredicates.ground(predicateId, args.map(_.cell(context))))
   }
 
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = {
     ResourceSummary.empty
   }
 
@@ -164,7 +164,7 @@ case class ConstPredicateCondition(predicateId: Int, args: IndexedSeq[CellExpres
 object TrueCondition extends IndexedCondition {
   def holds(s: State, context: EvalContext): Boolean = true
 
-  def resourceSummary(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = ResourceSummary.empty
+  def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = ResourceSummary.empty
 
   def computeMissingSummary(state: State): ResourceSummary = ResourceSummary.empty
 }

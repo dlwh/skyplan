@@ -15,8 +15,8 @@ object Util {
    * @param seq
    * @return
    */
-  def allArgumentListsForChoices(seq: IndexedSeq[Iterable[Int]]): IndexedSeq[IndexedSeq[Int]] = {
-    seq.foldLeft(IndexedSeq(IndexedSeq.empty[Int])){ (acc, objs) =>
+  def allArgumentListsForChoices(seq: IndexedSeq[Iterable[Int]]): IndexedSeq[Array[Int]] = {
+    seq.foldLeft(IndexedSeq(Array.empty[Int])){ (acc, objs) =>
       for(a <- acc; i <- objs) yield {
         a :+ i
       }

@@ -32,7 +32,7 @@ case class State(problem: ProblemInstance,
   }
 
 
-  def allPossibleGrounded(action: IndexedAction):IndexedSeq[IndexedSeq[Int]] = {
+  def allPossibleGrounded(action: IndexedAction):IndexedSeq[Array[Int]] = {
     val argLists = problem.allViableArgumentListsForAction(action)
     argLists.filter(action.canExecute(this, _))
   }
@@ -188,7 +188,7 @@ case class ProblemInstance(objects: GroundedObjects,
 
   val allViableGroundedActions = actions.groundedIndex.toIndexedSeq
 
-  def allViableArgumentListsForAction(action: IndexedAction):IndexedSeq[IndexedSeq[Int]] = {
+  def allViableArgumentListsForAction(action: IndexedAction):IndexedSeq[Array[Int]] = {
     val objects = action.signature map this.objects.instancesByType
     Util.allArgumentListsForChoices(objects)
   }
@@ -208,8 +208,14 @@ case class GroundedObjects(types: Index[String], index: Index[String], instances
   }
 }
 
-case class Grounded[T](t: T, args: IndexedSeq[Int], unindexedArgs: IndexedSeq[String]) {
+case class Grounded[T](t: T, args: Array[Int], unindexedArgs: IndexedSeq[String]) {
   override def toString = unindexedArgs.mkString("(" + t + " " , " ", ")")
+  override val hashCode = t.hashCode * 17 + java.util.Arrays.hashCode(args)
+
+  override def equals(other: Any): Boolean = other match {
+    case Grounded(u,args2, _) => u == t && java.util.Arrays.equals(args,args2)
+    case _ => false
+  }
 }
 
 case class Grounding[T](index: Index[T],
@@ -345,7 +351,8 @@ object ProblemInstance {
     for( (a, i) <- predicateIndex.pairs) {
       if(a.signature.nonEmpty) {
         val intArgs = Util.allArgumentListsForChoices(a.signature.map(instancesByType))
-        groundings(i) = Array.fill[Int](math.pow(index.size, a.signature.length).toInt max 1)(-1)
+        groundings(i) = new Array[Int](math.pow(index.size, a.signature.length).toInt max 1)
+        java.util.Arrays.fill(groundings(i),-1)
 
         for(instance <- intArgs) {
           val key = instance.foldLeft(0)(_ * index.size + _)
@@ -356,7 +363,7 @@ object ProblemInstance {
           inverse += i
         }
       } else {
-        val ind = groundedByName.index(Grounded(a, IndexedSeq.empty, IndexedSeq.empty))
+        val ind = groundedByName.index(Grounded(a, Array.empty, IndexedSeq.empty))
         groundings(i) = Array(ind)
       }
     }
@@ -384,13 +391,13 @@ object ProblemInstance {
         for(instance <- intArgs) {
           val key = instance.foldLeft(0)(_ * index.size + _)
           assert(key >= 0, "Too many objects.... gonna have to rethink your indexing...")
-          val ind = groundedByName.index(Grounded(pn, instance, instance.map(index.get _)))
+          val ind = groundedByName.index(Grounded(pn, instance.toArray, instance.map(index.get _)))
 
           groundings(i)(key) = ind
           inverse += i
         }
       } else {
-        val ind = groundedByName.index(Grounded(p.name, IndexedSeq.empty, IndexedSeq.empty))
+        val ind = groundedByName.index(Grounded(p.name, Array.empty, IndexedSeq.empty))
         groundings(i) = Array(ind)
       }
     }
