@@ -38,12 +38,12 @@
 % proceedings, working notes, and technical reports.
 %
 \title{Faster Optimal Planning with Partial-Order Pruning}
-%%\author{AAAI Press\\
-%Association for the Advancement of Artificial Intelligence\\
-%2275 East Bayshore Road, Suite 160\\
-%Palo Alto, California 94303\\
-%}
-\author{}
+\author{David Hall, Aloni Cohen, David Burkett, \and Dan Klein \\
+EECS CS Division\\
+University of California Berkeley\\
+Berkeley, California 94720\\
+{\tt\{dlwh,dburkett,klein\}@cs.berkeley.edu, aloni.cohen@gmail.com}
+}
 
 
 \begin{comment}
@@ -396,7 +396,7 @@ Because each $m_{i}$ was pruned before being expanded,
 $n_{i} \neq m_{i}$ nor any state succeeding $m_{i}$ in $p^{i}_{m_{i}:}$.
 Hence $p^{i}_{n_{i}:} \supsetneq p^{i}_{m_{i}:} \implies |p^{i}_{n_{i}:}| > |p^{i}_{m_{i}:}|$.
 By the lemma, we also have % \reference?
- $|p^{i}_{m_{i}:}| \geq |p^{i+1}_{n_{i+1}:}|$. Combining the
+ $|p^{i}_{m_{i}:}| \geq |p^{(i+1)\mod k}_{n_{(i+1)\mod k}:}|$. Combining the
 inequalities yields: $|p^{1}_{m_{1}:}| \geq |p^{2}_{n_{2}:}| > |p^{2}_{m_{2}:}| > \dots > |p^{k}_{m_{k}:}| > |p^{1}_{m_{1}:}|$, 
 a contradiction.
 \end{proof}
