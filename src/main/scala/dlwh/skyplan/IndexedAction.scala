@@ -6,6 +6,7 @@ case class IndexedAction(name: String,
                          // args by type.
                          signature: IndexedSeq[Int],
                          precondition: Option[IndexedCondition],
+                         contcondition: Option[IndexedCondition],
                          effect: IndexedEffect,
                          duration: Option[ValExpression]) {
 
@@ -13,6 +14,7 @@ case class IndexedAction(name: String,
 
   def canExecute(state: State, args: IndexedSeq[Int]) = {
     precondition.forall(_.holds(state, state.makeContext(args)))
+    contcondition.forall(_.holds(state, state.makeContext(args)))
   }
 
   def durationOf(state: State, args: IndexedSeq[Int]) = {
@@ -34,7 +36,10 @@ object IndexedAction {
                  resources: Grounding[String],
                  constResources: Grounding[String]) = {
     val locals = Index(a.args.map(_.name))
-    val prec = a.precondition.map(IndexedCondition.fromCondition(_, props, constProps, resources.index, constResources.index, locals, objs.index))
+    val conds = a.precondition.map(IndexedCondition.fromCondition(_, props, constProps, resources.index, constResources.index, locals, objs.index))
+    var pre: Option[IndexedCondition] = None
+    var cont: Option[IndexedCondition] = None
+    if (conds.isDefined) { pre = conds.get._1; cont = conds.get._2 }
     val duration = a.duration.map {
       case PDDL.StandardDuration(comp, value) => Expression.fromValExp(value, resources.index, constResources.index, locals, objs.index)
     }
@@ -42,6 +47,6 @@ object IndexedAction {
 
     val effect = a.effect.map(IndexedEffect.fromEffect(_, locals, objs, resources, constResources, props, constProps)).getOrElse(NoEffect)
 
-    new IndexedAction(a.name, a.args.map(a => objs.types(a.tpe)), prec, effect, duration)
+    new IndexedAction(a.name, a.args.map(a => objs.types(a.tpe)), pre, cont, effect, duration)
   }
 }

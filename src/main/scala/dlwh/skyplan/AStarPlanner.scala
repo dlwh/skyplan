@@ -21,7 +21,7 @@ object AStarPlanner {
         (c, Some(grounding), c.cost - cost)
       }.toIndexedSeq
 
-      if(s.hasAction()) do_actions :+ { val s2 = s.copy; s2.elapseTime(); (s2, None, s2.cost - cost)}
+      if(s.canElapseTime()) do_actions :+ { val s2 = s.copy; s2.elapseTime(); (s2, None, s2.cost - cost)}
       else do_actions
     }
     new AStarSearch[State, Option[Grounded[IndexedAction]]].search(SearchProblem(inst.initialState, succ _, {(s: State) => inst.goal.holds(s, s.makeContext())}, heuristic = h _))

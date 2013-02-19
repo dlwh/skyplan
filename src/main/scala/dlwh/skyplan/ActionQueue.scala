@@ -16,6 +16,10 @@ class ActionQueue(actions: Grounding[IndexedAction]) {
   val data : OpenAddressHashArray[mutable.Queue[Double]] = new OpenAddressHashArray[mutable.Queue[Double]](actions.size)
   var nextTime : Double = Double.PositiveInfinity
 
+  def activeKeysIterator = data.activeKeysIterator
+
+  def getTimes(action: Int) = if (data.contains(action)) data(action) else mutable.Queue.empty[Double]
+
   def dequeue(time: Double = nextTime): Seq[(Int, Double)] = {
     var newNextTime = Double.PositiveInfinity
     val d = ArrayBuffer[(Int, Double)]()
