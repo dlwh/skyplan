@@ -19,34 +19,41 @@ object IndexedCondition {
                     resources: Index[String],
                     constResources: Index[String],
                     locals: Index[String],
-                    globals: Index[String]):IndexedCondition = {
-    def rec(cond: PDDL.Condition, varBindings: Index[String]):IndexedCondition =  {
+                    globals: Index[String]):(Option[IndexedCondition], Option[IndexedCondition]) = {
+    def rec(cond: PDDL.Condition, varBindings: Index[String]):(Option[IndexedCondition], Option[IndexedCondition]) =  {
       try {
         cond match {
           case PDDL.TimedCondition(Start, base) =>
-            fromCondition(base, preds, constPreds, resources, constResources, locals, globals)
-          case PDDL.AndCondition(conjuncts) =>
-            AndCondition(conjuncts.toArray.map(rec(_, varBindings)))
+            (rec(base, varBindings)._1, None)
+          case PDDL.ContinuousCondition(base) =>
+            (None, rec(base, varBindings)._1)
+          case PDDL.AndCondition(conjuncts) => {
+            val (pre, cont) = conjuncts.map(rec(_, varBindings)).foldLeft((IndexedSeq.empty[IndexedCondition], IndexedSeq.empty[IndexedCondition]))((s, p) => (s._1 ++ p._1, s._2 ++ p._2))
+            (conjoin(pre), conjoin(cont))
+          }
           case PDDL.FComp(comp, arg1, arg2) =>
-            BinaryCompCondition(comp,
+            (Some(BinaryCompCondition(comp,
               Expression.fromValExp(arg1, resources, constResources, varBindings, globals),
-              Expression.fromValExp(arg2, resources, constResources, varBindings, globals))
+              Expression.fromValExp(arg2, resources, constResources, varBindings, globals))), None)
           case PDDL.RComp(arg1, arg2) =>
-            CellEqualCondition(
+            (Some(CellEqualCondition(
               CellExpression.fromRefExp(arg1, varBindings, globals),
-              CellExpression.fromRefExp(arg2, varBindings, globals))
+              CellExpression.fromRefExp(arg2, varBindings, globals))), None)
           case PDDL.Pred(name, args) =>
             val predIndex = preds.index(name)
             if(predIndex >= 0)
-              PredicateCondition(predIndex, args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))
+              (Some(PredicateCondition(predIndex, args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))), None)
             else
-              ConstPredicateCondition(constPreds.index(name), args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))
-
+              (Some(ConstPredicateCondition(constPreds.index(name), args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))), None)
         }
       } catch {
         case e: Exception =>
           throw new RuntimeException("While handling " + cond, e)
       }
+    }
+
+    def conjoin(seq: IndexedSeq[IndexedCondition]) = {
+      if (seq.isEmpty) None else Some(AndCondition(seq.toArray))
     }
 
     rec(cond, locals)

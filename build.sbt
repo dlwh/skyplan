@@ -41,5 +41,9 @@ scalacOptions ++= Seq("-deprecation")
 
 javaOptions += "-Xmx2g"
 
+// fork in run := true
+
+// javaOptions in run += "-Xrunhprof:cpu=samples,depth=16"
+
 
 seq(assemblySettings: _*)

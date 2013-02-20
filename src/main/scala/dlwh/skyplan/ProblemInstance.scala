@@ -19,7 +19,8 @@ case class State(problem: ProblemInstance,
                  resources: HashVector[Double],
                  /** axioms are grounded predicates */
                  var axioms: mutable.BitSet,
-                 pendingActions: ActionQueue) {
+                 pendingActions: ActionQueue,
+                 actionsWithConditions: ActionQueue) {
 
 
   override def hashCode = {
@@ -57,28 +58,51 @@ case class State(problem: ProblemInstance,
     action.t.effect.updateState(this, PDDL.Start, this.makeContext(action.args))
     if(duration > 0) {
       pendingActions.enqueue(groundedIndex, time+duration)
+      if (action.t.contcondition.isDefined) actionsWithConditions.enqueue(groundedIndex, time+duration)
     }
   }
 
-  def hasAction() = {
-    pendingActions.nextTime != Double.PositiveInfinity
+  def canElapseTime(delta: Double = -1): Boolean = {
+    val targetTime = if (delta > 0) time + delta else (pendingActions.nextTime)
+    if (targetTime == Double.PositiveInfinity) return false
+    if (actionsWithConditions.nextTime != Double.PositiveInfinity) {
+      val s = copy
+      while (s.time < targetTime) {
+        val newTime = math.min(targetTime, s.pendingActions.nextTime)
+        for ((a, t) <- s.pendingActions.dequeue(newTime)) {
+          val action = problem.allViableGroundedActions(a)
+          // TODO: add duration field to context, use t - time as duration.
+          action.t.effect.updateState(s, PDDL.End, this.makeContext(action.args))
+        }
+        s.actionsWithConditions.activeKeysIterator.foreach(a => {
+          if (!s.actionsWithConditions.getTimes(a).isEmpty) {
+            val act = problem.allViableGroundedActions(a)
+            if (!act.t.contcondition.forall(_.holds(s, s.makeContext(act.args)))) return false
+          }
+        })
+        s.actionsWithConditions.dequeue(newTime)
+        s.time = newTime
+      }
+    }
+    true
   }
 
 
   def elapseTime(delta: Double = -1) {
     val newTime = if(delta > 0) time + delta else (pendingActions.nextTime)
-    for ((a, t) <- pendingActions.dequeue()) {
+    for ((a, t) <- pendingActions.dequeue(newTime)) {
       val action = problem.allViableGroundedActions(a)
       // TODO: add duration field to context, use t - time as duration.
       action.t.effect.updateState(this, PDDL.End, this.makeContext(action.args))
     }
+    actionsWithConditions.dequeue(newTime)
     time = newTime
   }
 
   def isEqualToOrDominatedBy(other: State): Boolean = problem.dominanceChecker.isEqualToOrDominatedBy(this, other)
 
   def copy: State = {
-    State(problem, time, resources.copy, axioms.clone(), pendingActions.clone())
+    State(problem, time, resources.copy, axioms.clone(), pendingActions.clone(), actionsWithConditions.clone())
   }
 
 
@@ -161,7 +185,7 @@ case class ProblemInstance(objects: GroundedObjects,
   }
 
   def initialState: State = {
-    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new ActionQueue(actions))
+    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new ActionQueue(actions), new ActionQueue(actions))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }
@@ -284,7 +308,7 @@ object ProblemInstance {
 
     val init = IndexedEffect.fromEffect(problem.initialState, Index[String](), objs,  resources, constantResources, propositions, constantPropositions, ignoreSettingConstants = true)
     val (constAxioms, constResourceValues) = IndexedEffect.getConstantValues(problem.initialState, Index[String], objs, resources, constantResources, propositions, constantPropositions)
-    val goal = IndexedCondition.fromCondition(problem.goal, propositions, constantPropositions, resources.index, constantResources.index, Index[String](), objs.index)
+    val goal = IndexedCondition.fromCondition(problem.goal, propositions, constantPropositions, resources.index, constantResources.index, Index[String](), objs.index)._1.get
 
     new ProblemInstance(objs, propositions, constantPropositions, actions, resources, constantResources, metric, goal, init, constAxioms, constResourceValues)
 

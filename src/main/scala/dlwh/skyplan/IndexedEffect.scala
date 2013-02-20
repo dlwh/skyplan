@@ -70,7 +70,7 @@ object IndexedEffect {
       case PDDL.CondEffect(guard, arg) =>
         val ig = IndexedCondition.fromCondition(guard, preds, constPreds, resources.index, constResources.index, varBindings, objs.index)
         val a = rec(arg, varBindings)
-        new CondEffect(ig, a)
+        new CondEffect(ig._1.get, a)
     }
     rec(effect, locals)
   }

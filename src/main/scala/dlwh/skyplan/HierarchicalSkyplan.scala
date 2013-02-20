@@ -20,7 +20,7 @@ object HierarchicalSkyplan {
         (c, Some(grounding), c.cost - cost)
       }.toIndexedSeq
 
-      if(s.hasAction()) do_actions :+ { val s2 = s.copy; s2.elapseTime(); (s2, None, s2.cost - cost)}
+      if(s.canElapseTime()) do_actions :+ { val s2 = s.copy; s2.elapseTime(); (s2, None, s2.cost - cost)}
       else do_actions
     }
 
@@ -67,6 +67,8 @@ object HierarchicalSkyplan {
 
 
   def main(args: Array[String]) {
+    val benchmarking = true
+
     def slurpResource(str: String) =  {
       Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
     }
@@ -95,13 +97,15 @@ object HierarchicalSkyplan {
     }
 
     try {
-      warmupHotspot()
-      val maxRuns = if (args.length >= 4) args(3).toInt else 20
+      var maxRuns = if (args.length >= 4) args(3).toInt else 10
       val instance = ProblemInstance.fromPDDL(domain, problem)
       var times = IndexedSeq.empty[Double]
       var nodes = IndexedSeq.empty[Double]
       var costs = IndexedSeq.empty[Double]
       val init = instance.initialState
+
+      if (benchmarking) warmupHotspot() else maxRuns = 1
+
       for (i <- 0 until maxRuns) {
         val start = System.currentTimeMillis()
         val plan = HierarchicalSkyplan.findPlan(instance, skyplan=skyplan)
