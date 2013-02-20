@@ -6,7 +6,7 @@ version := "0.1"
 
 organization := "dlwh"
 
-scalaVersion := "2.9.2"
+scalaVersion := "2.10.0"
 
 resolvers ++= Seq(
   "Scala Tools Snapshots" at "http://scala-tools.org/repo-snapshots/",
@@ -27,7 +27,9 @@ libraryDependencies <<= (scalaVersion, libraryDependencies) { (sv, deps) =>
     case x if x.startsWith("2.8") =>
       (deps :+ ("org.scalatest" % "scalatest" % "1.3" % "test")
             :+ ("org.scala-tools.testing" % "scalacheck_2.8.1" % "1.8" % "test"))
-    case x  => error("Unsupported Scala version " + x)
+    case _       =>
+     (deps :+ ("org.scalacheck" %% "scalacheck" % "1.10.0" % "test")
+           :+ ("org.scalatest" %% "scalatest" % "2.0.M5b" % "test"))
   }
 }
 
