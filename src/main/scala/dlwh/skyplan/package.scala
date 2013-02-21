@@ -72,6 +72,11 @@ package object skyplan {
     def copy = bs.clone().asInstanceOf[util.BitSet]
 
     def nonEmpty = !bs.isEmpty
+
+    def +=(i: Int) = {
+      bs.set(i)
+      this
+    }
   }
 
   private class BSIterator(bs: java.util.BitSet) extends Iterator[Int] {

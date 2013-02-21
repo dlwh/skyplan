@@ -1,6 +1,7 @@
 package dlwh.skyplan
 
-import collection.immutable.BitSet
+import collection.immutable.{IndexedSeq, BitSet}
+import collection.mutable
 
 /**
  * 
@@ -16,19 +17,19 @@ trait TechTree {
    *@param r
    * @return
    */
-  def actionsProvidingResource(r: Int):BitSet
-  def actionsConsumingResource(r: Int):BitSet
-  def actionsConsumingAxiom(a: Int):BitSet
-  def actionsProvidingAxiom(a: Int):BitSet
+  def actionsProvidingResource(r: Int):java.util.BitSet
+  def actionsConsumingResource(r: Int):java.util.BitSet
+  def actionsConsumingAxiom(a: Int):java.util.BitSet
+  def actionsProvidingAxiom(a: Int):java.util.BitSet
 
   def relevantActions(state: State, goal: IndexedCondition):Set[Grounded[IndexedAction]] = {
     val missingSummary:ResourceSummary = goal.computeMissingSummary(state)
 
     (
-      missingSummary.addedAxioms.flatMap(actionsProvidingAxiom(_))
-        ++ missingSummary.consumedAxioms.flatMap(actionsConsumingAxiom(_))
-        ++ missingSummary.addedResources.flatMap(actionsProvidingResource(_))
-        ++ missingSummary.consumedResources.flatMap(actionsConsumingResource(_))
+      missingSummary.addedAxioms.flatMap(actionsProvidingAxiom(_).iterator)
+        ++ missingSummary.consumedAxioms.flatMap(actionsConsumingAxiom(_).iterator)
+        ++ missingSummary.addedResources.flatMap(actionsProvidingResource(_).iterator)
+        ++ missingSummary.consumedResources.flatMap(actionsConsumingResource(_).iterator)
       ).map(inst.allViableGroundedActions)
 
   }
@@ -36,10 +37,10 @@ trait TechTree {
 
 object TechTree {
   def apply(inst: ProblemInstance):TechTree = {
-    val resourceProviders = Array.fill(inst.valFuns.groundedIndex.size)(new collection.mutable.BitSet)
-    val resourceConsumers = Array.fill(inst.valFuns.groundedIndex.size)(new collection.mutable.BitSet)
-    val axiomProviders = Array.fill(inst.predicates.groundedIndex.size)(new collection.mutable.BitSet)
-    val axiomConsumers = Array.fill(inst.predicates.groundedIndex.size)(new collection.mutable.BitSet)
+    val resourceProviders = Array.fill(inst.valFuns.groundedIndex.size)(new java.util.BitSet)
+    val resourceConsumers = Array.fill(inst.valFuns.groundedIndex.size)(new java.util.BitSet)
+    val axiomProviders = Array.fill(inst.predicates.groundedIndex.size)(new java.util.BitSet)
+    val axiomConsumers = Array.fill(inst.predicates.groundedIndex.size)(new java.util.BitSet)
 
 
     for( (grounded@Grounded(a, args, _),index) <- inst.allViableGroundedActions.zipWithIndex) {
@@ -69,16 +70,16 @@ object TechTree {
 
     // figure out who depends on who. Ugh.
     // rp = resourceProvider, etc.
-    val rpDependents = Array.fill(inst.valFuns.groundedIndex.size)(collection.mutable.Set[collection.mutable.BitSet]())
-    val rcDependents = Array.fill(inst.valFuns.groundedIndex.size)(collection.mutable.Set[collection.mutable.BitSet]())
-    val apDependents = Array.fill(inst.predicates.groundedIndex.size)(collection.mutable.Set[collection.mutable.BitSet]())
-    val acDependents = Array.fill(inst.predicates.groundedIndex.size)(collection.mutable.Set[collection.mutable.BitSet]())
+    val rpDependents = Array.fill(inst.valFuns.groundedIndex.size)(collection.mutable.Set[java.util.BitSet]())
+    val rcDependents = Array.fill(inst.valFuns.groundedIndex.size)(collection.mutable.Set[java.util.BitSet]())
+    val apDependents = Array.fill(inst.predicates.groundedIndex.size)(collection.mutable.Set[java.util.BitSet]())
+    val acDependents = Array.fill(inst.predicates.groundedIndex.size)(collection.mutable.Set[java.util.BitSet]())
     // these guys have some dependent
     val propagators =  collection.mutable.Set[(Symbol, Int)]()
 
     for( (grounded@Grounded(a, args, _), index) <- inst.allViableGroundedActions.zipWithIndex) {
       val needed:ResourceSummary = a.precondition.map(_.resourceSummary(inst, args)).getOrElse(ResourceSummary.empty)
-      val providersItouch = (resourceProviders ++ resourceConsumers ++ axiomProviders ++ axiomConsumers).filter(_ contains index)
+      val providersItouch = (resourceProviders ++ resourceConsumers ++ axiomProviders ++ axiomConsumers).filter(_ get index)
 
       // i need resources of this type, so if i provide a resource of another type,
       // I might need to do any task that
@@ -120,7 +121,7 @@ object TechTree {
       val oldSizes = actualPropagators.iterator.map(_._1).foldLeft(0)(_ + _.size)
 
       for( (src, dests) <- actualPropagators; dest <- dests) {
-        dest ++= src
+        dest |= src
       }
 
       val newSizes = actualPropagators.iterator.map(_._1).foldLeft(0)(_ + _.size)
@@ -130,20 +131,20 @@ object TechTree {
 
     val i = inst
 
-    val frp = resourceProviders.map(collection.immutable.BitSet() ++ _)
-    val frc = resourceConsumers.map(collection.immutable.BitSet() ++ _)
-    val fap = axiomProviders.map(collection.immutable.BitSet() ++ _)
-    val fac = axiomConsumers.map(collection.immutable.BitSet() ++ _)
+    val frp = resourceProviders
+    val frc = resourceConsumers
+    val fap = axiomProviders
+    val fac = axiomConsumers
 
     new TechTree {
       def inst: ProblemInstance = i
 
-      def actionsProvidingResource(r: Int): BitSet = frp(r)
+      def actionsProvidingResource(r: Int)= frp(r)
 
-      def actionsConsumingResource(r: Int): BitSet = frc(r)
+      def actionsConsumingResource(r: Int)= frc(r)
 
-      def actionsProvidingAxiom(a: Int): BitSet = fap(a)
-      def actionsConsumingAxiom(a: Int): BitSet = fac(a)
+      def actionsProvidingAxiom(a: Int)= fap(a)
+      def actionsConsumingAxiom(a: Int)= fac(a)
     }
 
   }
