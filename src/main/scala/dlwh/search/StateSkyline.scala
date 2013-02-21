@@ -1,10 +1,9 @@
 package dlwh.search
 
-import dlwh.skyplan.{MoreIsBetter, GoodAxiom, ProblemInstance, State}
+import dlwh.skyplan._
 import collection.mutable.ArrayBuffer
 import java.util
 import scala.collection.JavaConverters._
-import collection.mutable
 import dlwh.search.Oracle.Factory
 
 /**

@@ -28,7 +28,7 @@ class PartialOrderTest  extends FunSuite {
       val init: State = instance.initialState
       val compare = init.copy
       val axiom = instance.predicates.ground("has-cabin", IndexedSeq(instance.objects.index("location2")))
-      compare.axioms add axiom
+      compare.axioms set axiom
 
       val checker = new DominanceChecker(instance)
       val cmp = checker.compareStates(init, compare)

@@ -100,9 +100,9 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
   val timeOrder = resourceOrders(problem.valFuns.ground(problem.totalTimeIndex, IndexedSeq()))
   val (goodAxioms, badAxioms, crazyAxioms) = {
     val byType = (0 until axiomOrders.length).groupBy(axiomOrders)
-    val good = byType.get(GoodAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty)
-    val bad = byType.get(BadAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty)
-    val crazy = byType.get(CrazyAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty)
+    val good = byType.get(GoodAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty).toJavaBitSet
+    val bad = byType.get(BadAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty).toJavaBitSet
+    val crazy = byType.get(CrazyAxiom).map(mutable.BitSet.empty ++ _).getOrElse(mutable.BitSet.empty).toJavaBitSet
 
     (good, bad, crazy)
   }

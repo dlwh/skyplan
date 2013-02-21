@@ -135,24 +135,6 @@ object NoEffect extends IndexedEffect {
   def possibleDelta(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = ResourceSummary.empty
 }
 
-case class EnableMultiple(preds: BitSet) extends IndexedEffect {
-  def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
-    state.axioms |= preds
-  }
-
-  def possibleDelta(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = ResourceSummary(addedAxioms = preds)
-}
-
-case class DisableMultiple(preds: BitSet) extends IndexedEffect {
-  def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext) {
-    state.axioms &~= preds
-  }
-
-  def possibleDelta(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
-    ResourceSummary(consumedAxioms = preds)
-  }
-}
-
 case class AndEffect(conjuncts: IndexedSeq[IndexedEffect]) extends IndexedEffect {
   def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext) {
     conjuncts foreach (_.updateState(state, time, context))
@@ -164,7 +146,7 @@ case class AndEffect(conjuncts: IndexedSeq[IndexedEffect]) extends IndexedEffect
 
 case class DisableDynamicPredicate(predicateId: Int, args: IndexedSeq[CellExpression]) extends IndexedEffect {
   def updateState(state: State, time: PDDL.TimeSpecifier, context: EvalContext) {
-    state.axioms -= state.problem.predicates.ground(predicateId, args.map(_.cell(context)))
+    state.axioms.set(state.problem.predicates.ground(predicateId, args.map(_.cell(context))), false)
   }
 
   def possibleDelta(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
@@ -176,7 +158,7 @@ case class DisableDynamicPredicate(predicateId: Int, args: IndexedSeq[CellExpres
 
 case class EnableDynamicPredicate(predicateId: Int, args: IndexedSeq[CellExpression]) extends IndexedEffect {
   def updateState(state: State, time: PDDL.TimeSpecifier,  context: EvalContext) {
-    state.axioms += state.problem.predicates.ground(predicateId, args.map(_.cell(context)))
+    state.axioms.set(state.problem.predicates.ground(predicateId, args.map(_.cell(context))))
   }
 
   def possibleDelta(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {

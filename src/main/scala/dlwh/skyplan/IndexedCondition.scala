@@ -138,7 +138,7 @@ case class CellEqualCondition(lhs: CellExpression, rhs: CellExpression) extends 
 
 case class PredicateCondition(predicateId: Int, args: Array[CellExpression]) extends IndexedCondition {
   def holds(s: State, context: EvalContext): Boolean = {
-    s.axioms(s.problem.predicates.ground(predicateId, args.map(_.cell(context))))
+    s.axioms.get(s.problem.predicates.ground(predicateId, args.map(_.cell(context))))
   }
 
   def resourceSummary(inst: ProblemInstance, args: Array[Int]): ResourceSummary = {

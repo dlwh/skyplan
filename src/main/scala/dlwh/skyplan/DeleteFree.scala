@@ -39,8 +39,6 @@ object DeleteFree {
     case e:AndEffect => AndEffect(e.conjuncts.map(convertEffect))
     case e:CondEffect => CondEffect(convertCondition(e.guard), convertEffect(e))
     case e:DisableDynamicPredicate => NoEffect
-    case e:DisableMultiple => NoEffect
-    case e:EnableMultiple => e
     case e:EnableDynamicPredicate => e
     case NoEffect => e
     case TimedEffect(when, e2) => TimedEffect(when, convertEffect(e2))

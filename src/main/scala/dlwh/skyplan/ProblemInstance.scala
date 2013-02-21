@@ -12,13 +12,14 @@ import dlwh.skyplan.PDDL.Action
 import dlwh.skyplan.PDDL.Predicate
 import dlwh.skyplan.Expression.Resource
 import breeze.linalg.Axis._0
+import java.util
 
 case class State(problem: ProblemInstance,
                  var time: Double,
                  /** resources are grounded fluents with number domains */
                  resources: HashVector[Double],
                  /** axioms are grounded predicates */
-                 var axioms: mutable.BitSet,
+                 var axioms: java.util.BitSet,
                  pendingActions: ActionQueue,
                  actionsWithConditions: ActionQueue) {
 
@@ -28,7 +29,7 @@ case class State(problem: ProblemInstance,
   }
 
   override def equals(other: Any) = other match {
-    case other: State => other.time == time && resources == other.resources && axioms.subsetOf(other.axioms) && other.axioms.subsetOf(axioms) && pendingActions == other.pendingActions
+    case other: State => other.time == time && resources == other.resources && axioms == (other.axioms) && pendingActions == other.pendingActions
     case x => false
   }
 
@@ -102,7 +103,7 @@ case class State(problem: ProblemInstance,
   def isEqualToOrDominatedBy(other: State): Boolean = problem.dominanceChecker.isEqualToOrDominatedBy(this, other)
 
   def copy: State = {
-    State(problem, time, resources.copy, axioms.clone(), pendingActions.clone(), actionsWithConditions.clone())
+    State(problem, time, resources.copy, axioms.clone().asInstanceOf[java.util.BitSet], pendingActions.clone(), actionsWithConditions.clone())
   }
 
 
@@ -158,7 +159,7 @@ case class State(problem: ProblemInstance,
   def hasAxiom(name: String, args: String*): Boolean = {
     import problem._
     val resource = predicates.ground(predicates.index(predicates.index.find(_ == name).get), args.map(objects.index).toIndexedSeq)
-    axioms(resource)
+    axioms.get(resource)
   }
 }
 
@@ -185,7 +186,7 @@ case class ProblemInstance(objects: GroundedObjects,
   }
 
   def initialState: State = {
-    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), mutable.BitSet(), new ActionQueue(actions), new ActionQueue(actions))
+    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), new util.BitSet(), new ActionQueue(actions), new ActionQueue(actions))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }
