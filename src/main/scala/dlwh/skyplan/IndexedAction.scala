@@ -13,8 +13,8 @@ case class IndexedAction(name: String,
   override def hashCode = name.hashCode * 73 + signature.hashCode
 
   def canExecute(state: State, args: IndexedSeq[Int]) = {
-    precondition.forall(_.holds(state, state.makeContext(args)))
-    contcondition.forall(_.holds(state, state.makeContext(args)))
+    precondition.forall(_.holds(state, state.makeContext(args))) &&
+      contcondition.forall(_.holds(state, state.makeContext(args)))
   }
 
   def durationOf(state: State, args: IndexedSeq[Int]) = {
