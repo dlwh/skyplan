@@ -61,7 +61,7 @@ class HierarchicalSkyplanTest  extends FunSuite {
       val instance = ProblemInstance.fromPDDL(domain, problem)
       val plan = HierarchicalSkyplan.findPlan(instance, true)
       assert(plan.nonEmpty,plan)
-      println(plan.get._1)
+//      println(plan.get._1)
       assert(plan.get._2._1 === 50.0)
     } catch {
       case e =>
@@ -69,4 +69,45 @@ class HierarchicalSkyplanTest  extends FunSuite {
         throw e
     }
   }
+
+
+  test("Elevators 0 ") {
+    val input = slurpResource("examples/pddl/tempo-sat/elevators/p00.pddl")
+    val input2 = slurpResource("examples/pddl/tempo-sat/elevators/p00-domain.pddl")
+    val problem = PDDL.parseProblem(input)
+    val domain = PDDL.parseDomain(input2)
+
+    try {
+
+      val instance = ProblemInstance.fromPDDL(domain, problem)
+      val plan = HierarchicalSkyplan.findPlan(instance, true)
+      assert(plan.nonEmpty,plan)
+      //      println(plan.get._1)
+      assert(plan.get._2._1 === 14.0)
+    } catch {
+      case e =>
+        e.printStackTrace()
+        throw e
+    }
+  }
+
+//  test("Elevators 1") {
+//    val input = slurpResource("examples/pddl/tempo-sat/elevators/p01.pddl")
+//    val input2 = slurpResource("examples/pddl/tempo-sat/elevators/p01-domain.pddl")
+//    val problem = PDDL.parseProblem(input)
+//    val domain = PDDL.parseDomain(input2)
+//
+//    try {
+//
+//      val instance = ProblemInstance.fromPDDL(domain, problem)
+//      val plan = HierarchicalSkyplan.findPlan(instance, true)
+//      assert(plan.nonEmpty,plan)
+//            println(plan.get._1)
+//      assert(plan.get._2._1 === 14.0)
+//    } catch {
+//      case e =>
+//        e.printStackTrace()
+//        throw e
+//    }
+//  }
 }

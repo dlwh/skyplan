@@ -140,7 +140,9 @@ case class AndEffect(conjuncts: IndexedSeq[IndexedEffect]) extends IndexedEffect
     conjuncts foreach (_.updateState(state, time, context))
   }
   def possibleDelta(inst: ProblemInstance, args: IndexedSeq[Int]): ResourceSummary = {
-    conjuncts.map(_.possibleDelta(inst, args)).reduceLeft(_ ++ _)
+    val pieces = conjuncts.map(_.possibleDelta(inst, args))
+    val joint = pieces.reduceLeft(_ ++ _)
+    joint
   }
 }
 

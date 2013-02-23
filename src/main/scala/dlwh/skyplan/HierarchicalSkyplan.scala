@@ -24,6 +24,8 @@ object HierarchicalSkyplan {
       else do_actions
     }
 
+
+
     val projected = projectionHierarchy(inst).map{ inst2 =>
       SearchProblem(inst.initialState, {succ(_:State, _: Double, inst2.goal)}, {(s: State) => inst2.goal.holds(s, s.makeContext())})
     }
@@ -39,12 +41,16 @@ object HierarchicalSkyplan {
     case _ =>  IndexedSeq(inst)
   }
 
-
+  def slurpResource(str: String) =  {
+    import java.io._
+    if(new File(str).exists)
+      Source.fromInputStream(new FileInputStream(str)).mkString
+    else
+      Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
+  }
 
   def warmupHotspot() {
-    def slurpResource(str: String) =  {
-      Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
-    }
+
     val domainFile = "examples/pddl/tempo-sat/woodworking/p03-domain.pddl"
     val problemFile = "examples/pddl/tempo-sat/woodworking/p03.pddl"
     val input = slurpResource(domainFile)
@@ -67,11 +73,8 @@ object HierarchicalSkyplan {
 
 
   def main(args: Array[String]) {
-    val benchmarking = true
+    val benchmarking = false
 
-    def slurpResource(str: String) =  {
-      Source.fromInputStream(this.getClass.getClassLoader.getResourceAsStream(str)).mkString
-    }
     val skyplan = args.length < 1 || args(0).toBoolean
     val domainFile = if (args.length >= 3) args(1) else "examples/pddl/tempo-sat/woodworking/p03-domain.pddl"
     val problemFile = if (args.length >= 3) args(2) else "examples/pddl/tempo-sat/woodworking/p03.pddl"

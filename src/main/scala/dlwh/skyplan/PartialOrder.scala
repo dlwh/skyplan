@@ -158,7 +158,7 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
     applyOrderingsForCondition(problem.goal, EvalContext.emptyContext, ro, ao)
     applyToAll(ro, LessIsBetter, allVars(problem.metricExp, false, EvalContext.emptyContext))
     for ((action, actionArgs) <- problem.allGroundedActions) {
-      for (pc <- action.precondition) {
+      for (pc <- action.precondition.iterator ++ action.contcondition) {
         val context = new EvalContext {
           def local(i: Int) = actionArgs(i)
           def numLocals = actionArgs.size
@@ -243,15 +243,15 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
     // if they differ at all.
     if(first.axioms != second.axioms) {
       val first_xor_second = (first.axioms ^ second.axioms)
-      if((first_xor_second & crazyAxioms).nonEmpty) return NonComparable
+      if((first_xor_second intersects crazyAxioms)) return NonComparable
 
       val first_minus_second = (first.axioms &~ second.axioms)
       val second_minus_first = (second.axioms &~ first.axioms)
 
-      val extraGood = (first_minus_second & goodAxioms).nonEmpty
-      val fewerGood = (second_minus_first & goodAxioms).nonEmpty
-      val extraBad = (first_minus_second & badAxioms).nonEmpty
-      val fewerBad = (second_minus_first & badAxioms).nonEmpty
+      val extraGood = (first_minus_second intersects goodAxioms)
+      val fewerGood = (second_minus_first intersects goodAxioms)
+      val extraBad  = (first_minus_second intersects badAxioms)
+      val fewerBad  = (second_minus_first intersects badAxioms)
       if( (extraGood && fewerGood) || (extraBad && fewerBad) ) {
         cmp = NonComparable
       } else if(extraGood && !extraBad) {
@@ -266,13 +266,13 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
     if (cmp == NonComparable) return cmp
     if (shortCircuitOnDominates && cmp == Dominates) return cmp
 
-    val visited = collection.mutable.BitSet.empty
+    var visited = new Array[Boolean](first.resources.length)
     var i = 0
     while(i < first.resources.iterableSize) {
       if(first.resources.isActive(i)) {
         val r = first.resources.index(i)
         val v1 = first.resources.data(i)
-        visited += r
+        visited(r) = true
         val o = resourceOrders(r)
         if (o != null) {
           cmp = cmp combine o.orderResourceQuantities(v1, second.resources(r))
@@ -300,11 +300,13 @@ case class DominanceChecker(problem: ProblemInstance, assumePositiveActionEffect
       i += 1
     }
 
+    visited = new Array[Boolean](first.pendingActions.data.size)
+
     i = 0
     while(i < first.pendingActions.data.iterableSize) {
       if(first.pendingActions.data.isActive(i)) {
         val action = first.pendingActions.data.indexAt(i)
-          visited += action
+          visited(action) = true
           cmp = checkActionForDominance(first, action, second, cmp)
           if (cmp == NonComparable) return cmp
           if (shortCircuitOnDominates && cmp == Dominates) return cmp

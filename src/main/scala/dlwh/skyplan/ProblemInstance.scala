@@ -3,7 +3,7 @@ import breeze.linalg._
 import breeze.util._
 import collection.immutable.{Queue, BitSet}
 import breeze.collection.mutable.OpenAddressHashArray
-import collection.mutable
+import collection.{immutable, mutable}
 import dlwh.skyplan.PDDL._
 import collection.mutable.ArrayBuffer
 import dlwh.skyplan.PDDL.Problem
@@ -178,6 +178,10 @@ case class ProblemInstance(objects: GroundedObjects,
                            initEffect: IndexedEffect,
                            constAxioms: BitSet,
                            constResourceValues: HashVector[Double]) {
+  def groundedAxiom(pred: String, args: String*): Int = {
+    predicates.ground(pred, args.map(objects.index).toArray)
+  }
+
 
   lazy val totalTimeIndex = valFuns.index("total-time")
 
@@ -202,13 +206,18 @@ case class ProblemInstance(objects: GroundedObjects,
     argLists
   }
 
-  def allGroundedActions = {
+  def allGroundedActions: immutable.IndexedSeq[(IndexedAction, IndexedSeq[Int])] = {
     (for( a <- actions.index; argList <- allArgumentLists(a)) yield a -> argList).toIndexedSeq
   }
 
   // DEBUG METHOD
   def groundedAction(name: String, args: String*) = {
     actions.ground(actions.index(actions.index.find(_.name== name).get), args.map(objects.index).toIndexedSeq)
+  }
+
+
+  def groundedActionObj(name: String, args: String*) = {
+    Grounded(actions.index.find(_.name==name).get, args.map(objects.index).toArray, args.toIndexedSeq)
   }
 
   val allViableGroundedActions = actions.groundedIndex.toIndexedSeq
@@ -234,7 +243,7 @@ case class GroundedObjects(types: Index[String], index: Index[String], instances
 }
 
 case class Grounded[T](t: T, args: Array[Int], unindexedArgs: IndexedSeq[String]) {
-  override def toString = unindexedArgs.mkString("(" + t + " " , " ", ")")
+  override def toString = unindexedArgs.mkString("Grounded(" + t + " " , " ", ")")
   override val hashCode = t.hashCode * 17 + java.util.Arrays.hashCode(args)
 
   override def equals(other: Any): Boolean = other match {

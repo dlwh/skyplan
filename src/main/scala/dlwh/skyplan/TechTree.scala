@@ -37,9 +37,13 @@ trait TechTree {
 
 object TechTree {
   def apply(inst: ProblemInstance):TechTree = {
+    // which actions provide this resource
     val resourceProviders = Array.fill(inst.valFuns.groundedIndex.size)(new java.util.BitSet)
+    // which actions consume this resource
     val resourceConsumers = Array.fill(inst.valFuns.groundedIndex.size)(new java.util.BitSet)
+    // which actions provide this axiom
     val axiomProviders = Array.fill(inst.predicates.groundedIndex.size)(new java.util.BitSet)
+    // which actions consume this axiom
     val axiomConsumers = Array.fill(inst.predicates.groundedIndex.size)(new java.util.BitSet)
 
 
@@ -64,11 +68,15 @@ object TechTree {
 //    }
 
 
+//    val i = 6
+//    println(i + " " + inst.predicates.groundedIndex.get(i) + " providers: " + axiomProviders(i).map(inst.allViableGroundedActions))
+
 //    for(i <- 0 until axiomProviders.length) {
-//      println(inst.predicates.groundedIndex.get(i) + " providers: " + axiomProviders(i).map(inst.allViableGroundedActions))
+//      println(i + " " + inst.predicates.groundedIndex.get(i) + " providers: " + axiomProviders(i).map(inst.allViableGroundedActions))
 //    }
 
     // figure out who depends on who. Ugh.
+    // bitsets are the actions that might depend on having the resource/axiom produced/consumed
     // rp = resourceProvider, etc.
     val rpDependents = Array.fill(inst.valFuns.groundedIndex.size)(collection.mutable.Set[java.util.BitSet]())
     val rcDependents = Array.fill(inst.valFuns.groundedIndex.size)(collection.mutable.Set[java.util.BitSet]())
@@ -78,12 +86,12 @@ object TechTree {
     val propagators =  collection.mutable.Set[(Symbol, Int)]()
 
     for( (grounded@Grounded(a, args, _), index) <- inst.allViableGroundedActions.zipWithIndex) {
-      val needed:ResourceSummary = a.precondition.map(_.resourceSummary(inst, args)).getOrElse(ResourceSummary.empty)
+      val needed:ResourceSummary = (a.contcondition.iterator ++ a.precondition).map(_.resourceSummary(inst, args)).foldLeft(ResourceSummary.empty)(_ ++ _)
       val providersItouch = (resourceProviders ++ resourceConsumers ++ axiomProviders ++ axiomConsumers).filter(_ get index)
 
       // i need resources of this type, so if i provide a resource of another type,
       // I might need to do any task that
-      // provides the ocnsumed resource.
+      // provides the consumed resource.
       for(r <- needed.addedResources) {
         rpDependents(r) ++= providersItouch
         propagators += ('RP -> r)
@@ -129,15 +137,19 @@ object TechTree {
     }
 
 
-    val i = inst
+    val _inst = inst
 
     val frp = resourceProviders
     val frc = resourceConsumers
     val fap = axiomProviders
     val fac = axiomConsumers
 
+
+//    println(i + " " + inst.predicates.groundedIndex.get(i) + " providers: " + fap(i).map(inst.allViableGroundedActions))
+
+
     new TechTree {
-      def inst: ProblemInstance = i
+      def inst: ProblemInstance = _inst
 
       def actionsProvidingResource(r: Int)= frp(r)
 
@@ -163,13 +175,20 @@ case class ResourceSummary(addedResources: BitSet = BitSet.empty,
                          consumedResources: BitSet = BitSet.empty,
                          addedAxioms: BitSet = BitSet.empty,
                          consumedAxioms: BitSet = BitSet.empty) {
+  def decode(instance: ProblemInstance): String = (
+    s"ResourceSummary(addedResources=${addedResources.toIndexedSeq.map(instance.valFuns.groundedIndex.get(_))}, "
+    + s"consumedResources=${consumedResources.toIndexedSeq.map(instance.valFuns.groundedIndex.get(_))}, "
+    + s"addedAxioms=${addedAxioms.toIndexedSeq.map(instance.predicates.groundedIndex.get(_))},"
+    + s"consumedAxioms=${consumedAxioms.toIndexedSeq.map(instance.predicates.groundedIndex.get(_))})"
+  )
+
   def flip: ResourceSummary = ResourceSummary(consumedResources, addedResources, addedAxioms, consumedAxioms)
 
   def ++(delta: ResourceSummary) = {
     ResourceSummary(addedResources ++ delta.addedResources,
       consumedResources ++ delta.consumedResources,
       addedAxioms ++ delta.addedAxioms,
-      consumedResources ++ delta.consumedResources
+      consumedAxioms ++ delta.consumedAxioms
     )
   }
 }
