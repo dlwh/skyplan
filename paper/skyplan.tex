@@ -31,14 +31,14 @@
 \pdfinfo{
 /Title (Faster Optimal Planning with Partial-Order Pruning)
 /Subject (AAAI Publications)
-/Author (Redacted)}
+/Author (David Hall, Alon Cohen, David Burkett and Dan Klein)}
 \setcounter{secnumdepth}{0}  
  \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
 %
 \title{Faster Optimal Planning with Partial-Order Pruning}
-\author{David Hall, Aloni Cohen, David Burkett, \and Dan Klein \\
+\author{David Hall, Alon Cohen, David Burkett, \and Dan Klein \\
 EECS CS Division\\
 University of California Berkeley\\
 Berkeley, California 94720\\
@@ -316,13 +316,13 @@ can safely prune $m$.
 We formalize this intuition as follows:
 \begin{definition}[Compatibility]
 	\label{def-compatibility}
-  A partial order $\prec$ is \textit{compatible} if for all states $m \preceq n$,
+  A partial order $\prec$ is \textit{compatible} if for all states $n \preceq m$,
   \begin{enumerate}
-    \item $g(n) \le g(m)$, and 
-    \item $\forall m^\prime \in \mathrm{succ}(m)$ $\exists n^\prime \in
-      \mathrm{succ}(n)$ such that $m^\prime \preceq n^\prime$ and
-      $\mathrm{cost}(m,m^\prime) \ge \mathrm{cost}(n, n^\prime)$, and
-    \item If $m \in F$, then $n \in F$
+    \item $g(m) \le g(n)$, and 
+    \item $\forall n^\prime \in \mathrm{succ}(n)$ $\exists m^\prime \in
+      \mathrm{succ}(m)$ such that $n^\prime \preceq m^\prime$ and
+      $\mathrm{cost}(n,n^\prime) \ge \mathrm{cost}(m, m^\prime)$, and
+    \item If $n \in F$, then $m \in F$
   \end{enumerate}
 \end{definition}
 This recursive definition of compatibility essentially means that
@@ -332,7 +332,7 @@ case that $n$ is no cheaper than $m$ and that $m$'s successors
 to $\preceq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
-states $m$ and $n$ with $m \ne n$. XXX maybe comment on whether a trivial partial
+states $m$ and $n$ with $m \ne n$. XXX maybe comment on whether a non-trivial partial
 order need exist
 
 
@@ -833,21 +833,30 @@ in practice it is several orders of magnitude faster.
 
 
 
-We empirically evaluated Skyplan in two settings. First, we ran experiments on a collection
-of standard tasks from the 2008 International Planning Competition. The
-woodworking domain. We chose this domain because it
-permits simultaneous actions, and Skyplan is particularly well-suited to domains where the
-extra freedom afforded by concurrency results in an explosion in the set of possible
-states. However, like most standard planning domains, the woodworking domain is largely concerned with
-discrete objects rather than ever-growing resources. Therefore, this domain is still rather limited in the
-amount of concurrency needed, with even the most complex problems never permitting more
-than a dozen simultaneous actions. As we will show, Skyplan achieves modest improvements in this domain. 
+We empirically evaluated Skyplan in two settings: a collection of standard domains from the International Planning Competitions, and a new domain based on the video game StarCraft. In the first setting, we note that the competitions have not focused on optimal planning in time-sensitive domains with concurrency. Instead, the domains in these competitions are either to find the optimal plan in a small domain without concurrency, or to find a good, satisficing plan in larger domains with concurrency.\footnote{Still other configurations exist, but the are further afield from our current interest.} To that end, we look at experiments from domains of both types. 
 
-Skyplan performs best in domains with a large amount of concurrency, much more than is available in most
-standard planning domains. Therefore, we also ran experiments in a more realistic
-resource acquisition setting modeled on the video game StarCraft. Because this domain involves
-manipulating large numbers of resources at the same time, Skyplan's strengths will be more
-readily apparent.
+However, these standard domains are largely concerned with discrete objects
+rather than ever-growing resources. Therefore, even the concurrent domains
+require a still rather modest amount of concurrency, with even the most complex
+problems never permitting more than a dozen simultaneous actions. Nevertheless, Skyplan can perform quite well in some of these domains, while in others it does not perform as well.
+
+Skyplan performs best in domains with a large amount of concurrency, much more
+than is available in most standard planning domains. Therefore, we also ran
+experiments in a more realistic resource acquisition setting modeled on the
+video game StarCraft. Because this domain involves manipulating large numbers
+of resources at the same time, Skyplan's strengths will be more readily
+apparent.
+
+XXX put in after Burkett's changes:
+We implemented two versions of Skyplan and the relevant baselines, one for the generic PDDL-based domains, and one specialized to the Starcraft domain. They differ primarily in the heuristics used. Our generic implementation uses a hierarchical \Astar implementation (with skyline pruning), with no heuristic at the base level.  In StarCraft, we use a special heuristic crafted to this domain. The heuristic is essentially a critical path heuristic that ignores resource costs. XXX better description needed, probably needs to come later.
+ Both implementations use a variant of expansion cores~\citep{chen09completeness, xu11theory}, only exploring actions that could possibly lead to satisfying some part of the goal predicate.
+
+
+Baseline descriptions:
+
+Finally, we note that no available open source planning system can handle both temporal constraints and resources. As these properties are key motivations for our approach, we instead constructed our own baselines.
+The most obvious baseline is to use \Astar without skyline pruning. In addition, for Starcraft we compare to a previously constructed non-optimal baseline. This baseline XXX.
+
 
 \subsection{The Woodworking Domain}
 
