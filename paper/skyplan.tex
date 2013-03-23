@@ -51,17 +51,11 @@ Remaining ``minor comments''
 * Before Claim 3, you could briefly recall the definition of "optimally
   efficient" and what it means in this particular setting.
 
-* Definitions 3 and 4: In both definitions, part (2) is just the
-  contraposition of (1) and hence implied and unnecessary.
-
 * First paragraph after proof of Claim 4: "In this case, we would not be able
   to prune based on the number of widgets: its resource would be in R=". Maybe
-  I just don't see it, but shouldn't it be in R+?
-
-* Last paragraph before Def. 6: One of the n's should be an m.
+  I just don't see it, but shouldn't it be in R+? %Aloni: I think he's wrong on this point..
 
 * Could condition 2 of Def. 6 be cast in a more formal way?
-
 
 * Experiments: "The implementations of Skyplan and \Astar used in this domain are
   not using the Hierarchical implementation discussed above, but rather a
@@ -175,15 +169,13 @@ worth exploring; the X's can be safely pruned.}
 \subsection{Partial Orders}
 
 We will further assume that our graph is endowed with a partial
-order $\preceq$ that relates states $n$ to one another, with the
-intuitive semantics that $n \preceq m$ if $n$ is no better than $m$
-in any way. For example, in our sprockets and widgets example, $n
-\preceq m$ if $n$ has no more widgets and no more sprockets than
-$m$ and if $g(n) \ge g(m)$. Strict dominance $n \prec m$ holds if
-$m$ is in addition strictly better than $n$ in some way.  For any
+order $\preceq$ that relates states to one another, with the
+intuitive semantics that $m \preceq n$ if $n$ is at least as good as $m$
+in every way. For example, in our sprockets and widgets example, $m
+\preceq n$ if $m$ has no more widgets and no more sprockets than
+$n$ and if $g(m) \ge g(n)$. For any
 set of states $N$, we define the skyline of that set as
-$\textrm{skyline}(N)=\{n: \neg\exists n^\prime \in N: n \prec
-n^\prime\}$. 
+$\textrm{skyline}(N)=\{m: \neg\exists n \in N: m \preceq n\}$. 
 
 For example, in Figure \ref{fig:skyline}, we consider a domain with
 two resources, widgets and sprockets. If having more widgets and
@@ -241,15 +233,15 @@ unlike expansion cores in our system.
     \Procedure{UCSSkyplan}{$s, G, F, \preceq$}
     \State Initialize $\textit{Open}=\{\langle s,0\rangle\}$, $\textit{Closed}=\{\}$
     \While{ \textit{Open} is not empty}
-    \State Pop the minimum cost state $\mathbf{n} = \langle n,c\rangle\in \textit{Open}$
-    \State $n\rightarrow \textit{Closed}$
-      \If {$n\in F$} 
-        \State \Return the path to $n$ following back pointers
+    \State Pop the minimum cost state $\mathbf{m} = \langle m,c\rangle\in \textit{Open}$
+    \State $m\rightarrow \textit{Closed}$
+      \If {$m\in F$} 
+        \State \Return the path to $m$ following back pointers
       \EndIf
-      \If {$\forall m \in \textit{Open} \cup \textit{Closed}. n \nprec m$}
-        \For {$n^\prime\in\mathrm{succ}(n)$} 
-        \State $\mathbf{n^\prime} \gets \langle n^\prime,c+\mathrm{cost}(n,n^\prime)\rangle$
-        \State $\mathbf{n^\prime} \rightarrow \textit{Open}$
+      \If {$\nexists n \in \textit{Open} \cup \textit{Closed}, m \preceq n$}
+        \For {$m^\prime\in\mathrm{succ}(m)$} 
+        \State $\mathbf{m^\prime} \gets \langle m^\prime,c+\mathrm{cost}(m,m^\prime)\rangle$
+        \State $\mathbf{m^\prime} \rightarrow \textit{Open}$
         \EndFor
       \EndIf
     \EndWhile
@@ -291,8 +283,8 @@ likely have limited effect.
 \end{center}
   \caption{Abstract representation of search with compatible partial
   orders. The shaded area represents the goal region. Both $m$ and $n$ are reachable from the start state.
-  Because $m$ is a better state than $n$, and $m$'s successors
-  ``stay ahead'' of $n$'s, we can safely avoid expanding $m$ while
+  Because $n$ is a better state than $m$, and $n$'s successors
+  ``stay ahead'' of $m$'s, we can safely avoid expanding $m$ while
   still preserving optimality.}
   \label{fig:compatibility}
 \end{figure}
@@ -316,24 +308,28 @@ can safely prune $m$.
 We formalize this intuition as follows:
 \begin{definition}[Compatibility]
 	\label{def-compatibility}
-  A partial order $\prec$ is \textit{compatible} if for all states $n \preceq m$,
+  A partial order $\preceq$ is \textit{compatible} if for all states $m \preceq n$,
   \begin{enumerate}
-    \item $g(m) \le g(n)$, and 
-    \item $\forall n^\prime \in \mathrm{succ}(n)$ $\exists m^\prime \in
-      \mathrm{succ}(m)$ such that $n^\prime \preceq m^\prime$ and
-      $\mathrm{cost}(n,n^\prime) \ge \mathrm{cost}(m, m^\prime)$, and
-    \item If $n \in F$, then $m \in F$
+    \item $g(n) \le g(m)$, and 
+    \item $\forall m^\prime \in \mathrm{succ}(m)$ $\exists n^\prime \in
+      \mathrm{succ}(n)$ such that $m^\prime \preceq n^\prime$ and
+      $\mathrm{cost}(n,n^\prime) \le \mathrm{cost}(m,m^\prime)$, and
+    \item If $m \in F$, then $n \in F$
   \end{enumerate}
 \end{definition}
 This recursive definition of compatibility essentially means that
-if a state $n$ is dominated by a state $m$, then it must be the
-case that $n$ is no cheaper than $m$ and that $m$'s successors
-``stay ahead'' of $n$'s. Finally, $F$ must be closed with respect
+if a state $m$ is dominated by a state $n$, then it must be the
+case that $m$ is no cheaper than $n$ and that $n$'s successors
+``stay ahead'' of $m$'s. Finally, $F$ must be closed with respect
 to $\preceq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
-states $m$ and $n$ with $m \ne n$. XXX maybe comment on whether a non-trivial partial
-order need exist
+states $m$ and $n$ with $m \ne n$. %XXX maybe comment on whether a non-trivial partial
+%order need exist. If he means "trivial" in the math sense (that is, exactly the ordering 
+%described above, then he's right - there are always non-trival partial orders. The one's I can think of
+%are "trivial" in a sense in that they are (1) obvious, and (2) assume knowing what the shortest path is (or some other data).
+%That said, we do give an ordering in the "Inferring Partial Orderings" section; I think we should just point to it with 
+%something like: "We give a general construction of non-trivial orderings on a large class of problems in section X". 
 
 
 In planning problems, defining a compatible partial order is usually
@@ -407,7 +403,7 @@ is \emph{optimal}.
 \end{claim}
 \begin{proof} 
 Let $p^{*}$ be the last optimal path that was pruned during a run of Skyplan. 
-By the proof of Claim \ref{clm-complete} and the lemma 
+By the proof of Claim \ref{clm-complete} and the lemma % \reference?
 there is some path $p^\prime$ that is not pruned with
 $\mathrm{cost}(p^\prime) \leq \mathrm{cost}(p^{*})$.
 Thus, $p^\prime$ is optimal as well.
@@ -437,16 +433,16 @@ and an associated edge from $n^*$ to $f^*$ of cost $\epsilon$ (with $\epsilon < 
 On $G^\prime$ we apply the original partial order $\preceq$ with $n \npreceq m$ if either $n$ or $m$ is $f^*$.
 
 We must show that $\preceq$ is compatible on $G^\prime$. 
-Let $m,n \in G^\prime$ such that $n \preceq m$. Then neither $m$ or $n$ is $f^*$. Conditions (1) and (3) %\ref
-are clearly true in $G^\prime$ because they are true in $G$.  Furthermore, if $n \neq n^*$ condition (2) is true 
-because $\mathrm{succ}_{G^\prime}(n) = \mathrm{succ}_{G}(n)$. 
+Let $m,n \in G^\prime$ such that $m \preceq n$. By construction, neither $m$ or $n$ is $f^*$. Conditions (1) and (3) %\ref
+are clearly true in $G^\prime$ because they are true in $G$.  Furthermore, if $m \neq n^*$ condition (2) is true %\ref
+because $\mathrm{succ}_{G^\prime}(m) = \mathrm{succ}_{G}(m)$. 
 But as we observed above, no state expanded in Skyplan is
-dominated by any other state. Thus, $n \neq n^*$.
+dominated by any other state. Thus, $m \neq n^*$.
 
-Except for the fact that $n^*$ has an extra successor, $G^\prime$ is otherwise
+Except for the fact that $n^*$ has an additional successor, $G^\prime$ is otherwise
  identical to $G$. By assumption, B never examined the successors of $n^*$, and 
 must therefore follow the same execution path on the graph $G^\prime$, returning the goal state $f_B$.
-But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the optimality of B.
+But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the assumed optimality of B.
  \end{proof}
 
 
@@ -499,18 +495,14 @@ of predicates based on how they interact with a given resource. Let $b(n)$ be th
 A predicate $b$ is $r$-\textit{dependent} if $\exists n, n^\prime$ with $b(n) = \text{true}$ and $b(n^\prime) = \text{false}$, but where $n$ and $n^\prime$ are identical except that $n(r) \ne n^\prime(r)$.
 \end{definition}
 \begin{definition}[$r$-Positive]
-	A predicate $b$ is $r$-\textit{positive} if $b$ is $r$-dependent and
-	\begin{enumerate}
-		\item $\forall n, n^\prime$ identical except $n(r) < n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
-		\item $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $\neg b(n) \Rightarrow \neg b(n^\prime)$
-	\end{enumerate}
+	A predicate $b$ is $r$-\textit{positive} if $b$ is $r$-dependent and 
+	$\forall n, n^\prime$ identical except $n(r) < n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
 \end{definition}
+Note that this additionally implies the contrapositive:
+$\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $\neg b(n) \Rightarrow \neg b(n^\prime)$
 \begin{definition}[$r$-Negative]
 	A predicate $b$ is $r$-\textit{negative} if $b$ is $r$-dependent and
-	\begin{enumerate}
-		\item $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
-		\item $\forall n, n^\prime$ identical except $n(r) < n^\prime(r)$, $\neg b(n) \Rightarrow \neg b(n^\prime)$
-	\end{enumerate}
+	\item $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
 \end{definition}
 For example, the predicate ``$n(r) \ge 1$'' is $r$-positive, the predicate ``$n(r) \le 0$'' is \textit{r-negative}, the predicate ``$n(r_1) \ge n(r_2)$'' is $r_1$-positive, but $r_2$-negative, and the predicate ``$1 \le n(r) \le 2$'' is $r$-dependent, but neither $r$-positive nor $r$-negative.
 
@@ -650,7 +642,7 @@ $R^-$ or $R^\emptyset$. The extension to more general action effects is straight
 
 Intuitively, a state $n$ can only be better than a state $m$ if
 its action queue finishes faster than $m$'s, or if $n$ already
-has more resources than $n$ will have. We formalize this
+has more resources than $m$ will have. We formalize this
 intuition as follows:
 
 \begin{definition}[$\poq$]
