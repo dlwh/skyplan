@@ -740,7 +740,7 @@ in turn.
 			\hline
 		\end{tabular}
 	\end{center}
-	\caption{Results on sequential domains.}
+	\caption{Results on sequential domains. Times are averaged over 10 runs, except for Pegsol 10, which was averaged over 5 runs.}
 	\label{tab:seq-opt}
 \end{table}
 
@@ -768,7 +768,7 @@ in turn.
 			\hline
 		\end{tabular}
 	\end{center}
-	\caption{Results on temporal satisficing domains.}
+	\caption{Results on temporal satisficing domains. Times are averaged over 10 runs.}
 	\label{tab:tempo-sat}
 \end{table}
 
@@ -833,7 +833,13 @@ in practice it is several orders of magnitude faster.
 
 
 
-We empirically evaluated Skyplan in two settings: a collection of standard domains from the International Planning Competitions, and a new domain based on the video game StarCraft. In the first setting, we note that the competitions have not focused on optimal planning in time-sensitive domains with concurrency. Instead, the domains in these competitions are either to find the optimal plan in a small domain without concurrency, or to find a good, satisficing plan in larger domains with concurrency.\footnote{Still other configurations exist, but the are further afield from our current interest.} To that end, we look at experiments from domains of both types. 
+We empirically evaluated Skyplan in two settings: a collection of standard domains from the International
+Planning Competitions, and a new domain based on the video game StarCraft. In the first setting, we note that
+the competitions have not focused on optimal planning in time-sensitive domains with concurrency. Instead, the
+domains in these competitions are either to find the optimal plan in a small domain without concurrency, or to
+find a good, satisficing plan in larger domains with concurrency.\footnote{Still other configurations exist,
+but the are further afield from our current interest.} To that end, we look at experiments from domains of both
+types.
 
 However, these standard domains are largely concerned with discrete objects
 rather than ever-growing resources. Therefore, even the concurrent domains
@@ -847,9 +853,13 @@ video game StarCraft. Because this domain involves manipulating large numbers
 of resources at the same time, Skyplan's strengths will be more readily
 apparent.
 
-XXX put in after Burkett's changes:
-We implemented two versions of Skyplan and the relevant baselines, one for the generic PDDL-based domains, and one specialized to the Starcraft domain. They differ primarily in the heuristics used. Our generic implementation uses a hierarchical \Astar implementation (with skyline pruning), with no heuristic at the base level.  In StarCraft, we use a special heuristic crafted to this domain. The heuristic is essentially a critical path heuristic that ignores resource costs. XXX better description needed, probably needs to come later.
- Both implementations use a variant of expansion cores~\citep{chen09completeness, xu11theory}, only exploring actions that could possibly lead to satisfying some part of the goal predicate.
+XXX put in after Burkett's changes: We implemented two versions of Skyplan and the relevant baselines, one for
+the generic PDDL-based domains, and one specialized to the Starcraft domain. They differ primarily in the
+heuristics used. Our generic implementation uses a hierarchical \Astar implementation (with skyline pruning),
+with no heuristic at the base level. In StarCraft, we use a special heuristic crafted to this domain. The
+heuristic is essentially a critical path heuristic that ignores resource costs. XXX better description needed,
+probably needs to come later. Both implementations use a variant of expansion cores~\citep{chen09completeness,
+xu11theory}, only exploring actions that could possibly lead to satisfying some part of the goal predicate.
 
 
 Baseline descriptions:
@@ -858,21 +868,28 @@ Finally, we note that no available open source planning system can handle both t
 The most obvious baseline is to use \Astar without skyline pruning. In addition, for Starcraft we compare to a previously constructed non-optimal baseline. This baseline XXX.
 
 
-\subsection{The Woodworking Domain}
+\subsection{The IPC Domains}
 
-We used the woodworking problems released with 2008
-International Planning Competition.
-Though the later problems are fairly challenging and require satisficing solutions,
-the earlier problems are simple enough to be solved by basic optimal planners. We compare
-Skyplan to basic Hierarchical \Astar on the first 5 problems from this domain. We measured
+We evaluated Skyplan on problems from three different domains that were released with the 2008 International
+Planning Competition: Pegsol (peg solitaire), Woodworking, and Openstacks. Of these, Pegsol and Openstacks
+each appeared in both sequential and temporal versions, and we evaluated on both. These particular domains were
+chosen because the initial problems from each domain were simple enough to be solved by basic optimal 
+planners. For all problems, we measured
 the number of nodes popped (including those popped during the recursive searches used
 for heuristic computation) and the total time taken by each algorithm.\footnote{All
-these experiments were run on isolated 2.67GHz Intel Xeon processors.} The results are
-shown in Table~\ref{tab:woodworking}.
+these experiments were run on isolated 2.67GHz Intel Xeon processors.} The results for the sequential variants
+are shown in Table~\ref{tab:seq-opt}, and those for the temporal ones, are in Table~\ref{tab:tempo-sat}.
 
-Skyplan is consistently faster than Hierarchical \Astar, typically pruning almost 50\% of the
-nodes that H\Astar expands. Maintaining the skyline does impose some overhead cost, but Skyplan
-still retains anywhere from a 15\% to a 35\% speed advantage on the first four problems. In problem 5, which expands many more states, the asymptotic complexity of maintaining the skyline overwhelms the gains from pruning about half of the state space. This is not unexpected in this domain, which has relatively little concurrency, and so we turn now to a domain where the gains from Skyplan's pruning are more apparent.
+Skyplan is typically faster than Hierarchical \Astar, pruning as many as 98\% of the nodes that H\Astar
+expands, though the overhead of maintaining the skyline means that for this problem (the first temporal
+Openstacks problem), expanding fewer than 1/50th of the nodes results in a slightly less than 20x speedup. The
+Pegsol domains also showed consistent improvement, usually expanding fewer than half the nodes, and achieving
+commensurate speedups, particularly in the temporal variant. Results from the sequential Openstacks domain
+demonstrate that when the partial order fails to successfully prune many (or any) nodes, Skyplan's overhead
+eventually results in a slowdown vs H\AStar. The overhead is superlinear with respect to the size of the
+fringe, as exemplified in the Woodworking domain, where Skyplan's modest initial success gives way to the
+result in problem 5 where, due to the extremely high number of nodes, Skyplan's 50\% pruning rate is inadequate
+to combat the overhead, and the net effect of using Skyplan is an almost 4x slowdown.
 
 \subsection{The StarCraft Domain}
 
