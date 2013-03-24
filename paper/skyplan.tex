@@ -17,6 +17,7 @@
 \usepackage{graphicx}
 \usepackage{multirow}
 
+
 \theoremstyle{plain} \newtheorem{theorem}{Theorem} \newtheorem{proposition}{Proposition} \newtheorem{lemma}{Lemma}
 \newtheorem*{corollary}{Corollary}  \newtheorem{claim}{Claim} 
 
@@ -26,6 +27,8 @@
 
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\Astar}{A$^*$ }
+\newcommand{\HAstar}{HA$^*$ }
+\newcommand{\Astarpunct}{A$^*$}
 
 \frenchspacing
 \pdfinfo{
@@ -33,6 +36,8 @@
 /Subject (AAAI Publications)
 /Author (David Hall, Alon Cohen, David Burkett and Dan Klein)}
 \setcounter{secnumdepth}{0}  
+
+\usepackage{hyperref}
  \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
@@ -44,24 +49,6 @@ University of California Berkeley\\
 Berkeley, California 94720\\
 {\tt\{dlwh,dburkett,klein\}@cs.berkeley.edu, aloni.cohen@gmail.com}
 }
-
-
-\begin{comment}
-Remaining ``minor comments''
-* Before Claim 3, you could briefly recall the definition of "optimally
-  efficient" and what it means in this particular setting.
-
-* First paragraph after proof of Claim 4: "In this case, we would not be able
-  to prune based on the number of widgets: its resource would be in R=". Maybe
-  I just don't see it, but shouldn't it be in R+? %Aloni: I think he's wrong on this point..
-
-* Could condition 2 of Def. 6 be cast in a more formal way?
-
-* Experiments: "The implementations of Skyplan and \Astar used in this domain are
-  not using the Hierarchical implementation discussed above, but rather a
-  critical path heuristic". Why?
-
-\end{comment}
 
 
 \maketitle
@@ -78,7 +65,7 @@ Remaining ``minor comments''
   respect to this order can be pruned while provably maintaining
   optimality. We also describe a simple method for automatically
   discovering compatible partial orders in both serial and concurrent
-  domains. In our experiments we find that more than 90\% of search
+  domains. In our experiments we find that more than 98\% of search
   states can be pruned in some domains.
 \end{quote}
 \end{abstract}
@@ -88,13 +75,13 @@ Remaining ``minor comments''
 Planning problems differ from other search problems in a number of
 ways. One important distinction is that there are typically many
 planning states that are ``similar'' along one or more dimensions.
-XXX consider explaining job shop domains.
-For instance, in a job shop scheduling domain, one search state
-might have the same number of widgets---but fewer sprockets---than
-another. Assuming in this example that more is always better and that the two states
-can be reached at the same time, we can safely discard the latter,
-\textit{dominated} state, instead focusing our search on the better
-state.
+For instance, consider a job shop domain in which we are
+trying to assemble a set of products from a set of components. Here,
+one search state might have the same number of widgets---but fewer
+sprockets---than another. Assuming in this example that more is
+always better and that the two states can be reached at the same
+time, we can safely discard the latter, \textit{dominated} state,
+instead focusing our search on the better state.
 
 These kinds of similar, but clearly suboptimal, states are particularly
 common in concurrent domains, where the planner must make decisions
@@ -111,7 +98,7 @@ that are not dominated by any another state. Our system, Skyplan,
 is a refinement of Uniform Cost Search or \Astar~\citep{astar} that
 expands only those states that are in the skyline. Because, heuristics like
 those used in \Astar cannot compare two states to one another, Skyplan
-speeds up search in a way that is orthogonal to the traditional heuristics used in \Astar.
+speeds up search in a way that is orthogonal to the traditional heuristics used in \Astarpunct.
 
 The central idea underlying our approach is to define a partial
 order relationship between states in the search space. This partial
@@ -120,10 +107,9 @@ if it has no fewer ``good'' resources (e.g. job shop outputs) than
 another, no more ``bad'' resources (e.g. labor expended or time
 taken), and it is better in one or more ways. 
 
-
 In our analysis, we prove that our algorithm is both complete and
 optimal with a suitable partial order. Moreover, we prove that
-Skyplan is optimally efficient in the same sense as \Astar. That
+Skyplan is optimally efficient in the same sense as \Astarpunct. That
 is, given a fixed partial order, there is no complete and optimal
 algorithm that can expand fewer search nodes.
 
@@ -136,10 +122,10 @@ domains with durative actions---which actions have uniformly
 good or bad final effects.
 
 In our experiments, we compare Skyplan to a similar implementation
-of \Astar in a job shop domain. In addition, we introduce a new
+of \Astar in several standard domains. In addition, we introduce a new
 domain, based on the popular video game StarCraft. Skyplan performs
 especially well in this latter domain, cutting the branching factor
-by as much as 90\% compared to \Astar, and run times by more
+by as much as 90\% compared to \Astarpunct, and run times by more
 than a factor of 10.
 
 \section{Skyplan}
@@ -158,11 +144,13 @@ $n_f \in F$ with the lowest $g$ cost.
 \begin{figure}
 	\begin{center}
 	\includegraphics[width=3.3in]{skyline2d.pdf}
+  \vspace{-.4in}
 \end{center}
   \caption{An example set of states in a two-resource planning domain. If
 all pictured states have the same cost, then only those shown as circles are
 worth exploring; the X's can be safely pruned.}
   \label{fig:skyline}
+  \vspace{-.2in}
 \end{figure}
 
 
@@ -198,9 +186,9 @@ skyline queries in the context of planning. For example, the
 non-optimal Metric-FF planner~\citep{hoffmann2003metric} employed
 a more limited notion of dominance, requiring that all propositions
 be the same between two states, the domain to be monotonically
-``good'' in all resources, and for the dominating state to have no
+``good'' in all resources, and that the dominating state has no
 fewer resources along any axis. Our notion of dominance is more
-general. In other words, we are able to find more powerful partial
+general. That is, we are able to find more powerful partial
 orders in more general domains.
 
 In another satisficing planner, \citet{roger2010more} combined
@@ -223,8 +211,8 @@ layer. \citet{wehrle2012partial} recently showed that all of these
 techniques are special cases of more general techniques from computer
 aided verification, namely sleep sets~\citep{godefroid96partial}
 and stubborn sets~\citep{valmari92stubborn}. These methods are
-largely orthogonal to our approach; indeed, we use something not
-unlike expansion cores in our system.
+largely orthogonal to our approach; indeed, we use a version of
+expansion cores in our system.
 
 
 
@@ -248,14 +236,14 @@ unlike expansion cores in our system.
     \State fail
   \EndProcedure
   \end{algorithmic}
-\caption{A version of Skyplan based on uniform cost search.  }
+\caption{Skyplan based on uniform cost search}
 \label{alg:skyplan}
 \end{algorithm}
 
 \subsection{Algorithm}
 
 Skyplan is a fairly easy modification of a standard
-optimal search algorithm like Uniform Cost Search or \Astar. For
+optimal search algorithm like Uniform Cost Search or \Astarpunct. For
 the sake of exposition, we focus on Uniform Cost Search, though
 \Astar or any optimal graph search algorithm can be modified in the
 same way.\footnote{In our experiments we use either \Astar or
@@ -267,6 +255,8 @@ that are not strictly dominated by another state that we have either
 expanded or enqueued for expansion. That is, we only expand nodes
 that are in the skyline of the nodes we know about so far.
 
+\begin{comment}
+  // I think this is confusing and unneccessary, in retrospect
 Depending on the successor function, one might also want to compute
 the skyline of the successors of the state being expanded and only
 attempt to enqueue those nodes.  This check is purely an optimization,
@@ -275,17 +265,20 @@ useful depends on the kinds of search operators being applied: if
 there are many similar successors to a state, this check can prune a very large
 number of states. However, if most actions are very different, it will
 likely have limited effect.
+\end{comment}
 
 \subsection{Compatibility}
 \begin{figure}
 	\begin{center}
 	\includegraphics[width=3.3in]{compatibility-2.pdf}
+  \vspace{-.38in}
 \end{center}
   \caption{Abstract representation of search with compatible partial
   orders. The shaded area represents the goal region. Both $m$ and $n$ are reachable from the start state.
   Because $n$ is a better state than $m$, and $n$'s successors
   ``stay ahead'' of $m$'s, we can safely avoid expanding $m$ while
   still preserving optimality.}
+  \vspace{-.18in}
   \label{fig:compatibility}
 \end{figure}
 
@@ -295,7 +288,7 @@ on an optimal path
 are dominated by non-optimal states. Thus, we need to define a property
 under which a partial order is \textit{compatible} with a search graph. 
 While a broad class of partial orders might work, we have identified
-a property that is especially applicable to planning problems.
+a sufficient condition that is especially applicable to planning problems.
 Figure \ref{fig:compatibility} illustrates 
 compatibility for a simple graph. If our goal is to accumulate at
 least 18 widgets, then $n$ is clearly better than $m$ as
@@ -324,7 +317,11 @@ case that $m$ is no cheaper than $n$ and that $n$'s successors
 to $\preceq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
-states $m$ and $n$ with $m \ne n$. %XXX maybe comment on whether a non-trivial partial
+states $m$ and $n$ with $m \ne n$. We give a general construction
+of non-trivial orderings for a large class of problems in a subsequent
+section.
+
+%XXX maybe comment on whether a non-trivial partial
 %order need exist. If he means "trivial" in the math sense (that is, exactly the ordering 
 %described above, then he's right - there are always non-trival partial orders. The one's I can think of
 %are "trivial" in a sense in that they are (1) obvious, and (2) assume knowing what the shortest path is (or some other data).
@@ -345,7 +342,7 @@ infer a compatible partial order from the specification of a planning problem.
 In this section, we show that Skyplan is complete, optimal, and
 optimally efficient for any compatible partial order when used in
 conjunction with an optimal search algorithm like Uniform Cost
-Search or \Astar. Before proving the main results of this section,
+Search or \Astarpunct. Before proving the main results of this section,
 we prove a useful lemma.
 
 \begin{lemma}{}\label{clm-complete-lemma}
@@ -422,7 +419,7 @@ For any compatible partial order $\preceq$, Skyplan is \emph{optimally efficient
 \end{claim}
 \begin{proof} 
 (We prove the claim on the set of graphs for which all paths have unique costs: $n \neq m \implies g(n) \neq g(m)$. This proof
-is similar to the analogous proof for \Astar in \citet{holte1996hierarchical}. The generalization to graphs with
+is similar to the analogous proof for \Astar in \citet{astar}. The generalization to graphs with
 ties is also analogous, and we omit it in the interest of space.)
 
 Suppose otherwise. Then, there must exist an optimal algorithm B and a search problem $(G,\preceq)$ 
@@ -433,7 +430,7 @@ and an associated edge from $n^*$ to $f^*$ of cost $\epsilon$ (with $\epsilon < 
 On $G^\prime$ we apply the original partial order $\preceq$ with $n \npreceq m$ if either $n$ or $m$ is $f^*$.
 
 We must show that $\preceq$ is compatible on $G^\prime$. 
-Let $m,n \in G^\prime$ such that $m \preceq n$. By construction, neither $m$ or $n$ is $f^*$. Conditions (1) and (3) %\ref
+Let $m,n \in G^\prime$ such that $m \preceq n$. By construction, neither $m$ nor $n$ is $f^*$. Conditions (1) and (3) %\ref
 are clearly true in $G^\prime$ because they are true in $G$.  Furthermore, if $m \neq n^*$ condition (2) is true %\ref
 because $\mathrm{succ}_{G^\prime}(m) = \mathrm{succ}_{G}(m)$. 
 But as we observed above, no state expanded in Skyplan is
@@ -452,7 +449,7 @@ But by construction, $f^*$ is a lower-cost goal in $G^\prime$, contradicting the
 
 Now that we have a definition of compatible partial orders and an
 algorithm that can take advantage of them, all we need is a method
-for finding them. Of course, one can construct them by hand using
+for finding them. Of course, one can construct compatible partial orders by hand using
 domain knowledge, but that is not always desirable. In this section, we
 show how to automatically infer a compatible partial order from a
 sequential planning problem domain's specification, such as those
@@ -502,7 +499,7 @@ Note that this additionally implies the contrapositive:
 $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $\neg b(n) \Rightarrow \neg b(n^\prime)$
 \begin{definition}[$r$-Negative]
 	A predicate $b$ is $r$-\textit{negative} if $b$ is $r$-dependent and
-	\item $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
+	$\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
 \end{definition}
 For example, the predicate ``$n(r) \ge 1$'' is $r$-positive, the predicate ``$n(r) \le 0$'' is \textit{r-negative}, the predicate ``$n(r_1) \ge n(r_2)$'' is $r_1$-positive, but $r_2$-negative, and the predicate ``$1 \le n(r) \le 2$'' is $r$-dependent, but neither $r$-positive nor $r$-negative.
 
@@ -567,11 +564,13 @@ but they might have some high upper limit. For instance, we might
 like to have as many widgets as possible, except that we have only
 a large but finite amount of storage space for them.  In this case,
 we would not be able to prune based on the number of widgets: its
-resource would be in $R^=$. However, if the maximum number of widgets
-is indeed so high that we suspect that we will not reach it in
-search, we can treat it as though there was no limit. If we do in
-fact hit the limit, we then have to re-enqueue all nodes pruned
-based on widget count, and back off to the safer partial order.
+resource would be in $R^=$, because there are in some sense two
+resources: ``widgets'' and ``free space for widgets.'' However, if
+the maximum number of widgets is indeed so high that we suspect
+that we will not reach it in search, we can treat it as though there
+was no limit. If we do hit the limit, we then have to re-enqueue
+all nodes pruned based on widget count, and back off to the safer
+partial order.
 
 Second, it may not be the best ordering for a given problem. Consider
 a domain in which we can use sprockets to make a transmogrifier,
@@ -580,10 +579,9 @@ widgets to sprockets, and vice versa---because sprockets are in
 fact just upside-down widgets. In this case, sprockets and widgets
 are interchangeable, and so we can actually prune based on the sum
 of their count. However, the method just described is incapable of
-realizing this relationship. In general it is intractable to find
+realizing this relationship. In general, it is intractable to find
 the optimal partial ordering, but we suspect that such perverse
-examples as the one just described are not the most common case.
-
+examples are uncommon.
 
 
 \section{Partial Orders and Concurrency} 
@@ -635,8 +633,9 @@ $\mathrm{elapse\_time}(k)$. The cost of this transition is $\lambda k$, and the 
 In concurrent domains, in addition to a collection of resources, the state contains a queue
 of in-progress actions. Here, we'll construct a new partial order $\poq$ that takes the
 action queue into account. To simplify the exposition, we assume that all
-actions have \emph{beneficial} completion effects.\footnote{This assumption is met in all
-domains we consider in this work.} Formally, this means that any resource whose value is
+actions have \emph{beneficial} completion effects.%\footnote{This assumption is met in all
+%domains we consider in this work.} 
+Formally, this means that any resource whose value is
 increased at completion is in $R^+$ or $R^\emptyset$, and any resource whose value is decreased is in
 $R^-$ or $R^\emptyset$. The extension to more general action effects is straightforward.
 
@@ -675,8 +674,8 @@ the addition of $(a, d_a)$, and likewise for $q(n)$ and $q(n^\prime)$. This new 
 covered by the first case in Definition~\ref{def-poq}, and $m \poq n$ implies that the rest
 of $q(m^\prime)$ is matched by $n^\prime$, so we also have $m^\prime \poq n^\prime$.
 
-	All that remains is the $\mathrm{elapse\_time}$ transitions. Assume that $m^\prime$ is
-reached by following $\mathrm{elapse\_time}(k)$ from $m$. If we follow $\mathrm{elapse\_time}(k)$ from $n$, we incur the same cost and $n^\prime$ has the following two properties. First, for every pair $(a, t) \in q(m)$ with $t \le k$ that is completed as part of the transition, either:
+	As for the $\mathrm{elapse\_time}$ transitions, assume that $m^\prime$ is
+reached by following $\mathrm{elapse\_time}(k)$ from $m$. If we follow $\mathrm{elapse\_time}(k)$ from $n$, we incur the same cost and $n^\prime$ has the following two properties. First, for every $(a, t) \in q(m)$ with $t \le k$ that is completed as part of the transition, either:
 \begin{enumerate}
 	\item $n$ already had a corresponding resource advantage over $n$ and thus $m^\prime$ does not overtake $n^\prime$, or
 	\item $\exists (a, t^\prime) \in q(n)$ with $t^\prime \le t \le k$, and so this action completes and $n^\prime$ gets a corresponding resource improvement.
@@ -699,71 +698,13 @@ and we then use that partial order in a standard graph search.
 
 There are a few pragmatic details of our system that can substantially
 affect performance that are worth mentioning. One is our choice of
-Hierarchical \Astar~\citep{holte1996hierarchical} as base search
+Hierarchical \Astar\citep{holte1996hierarchical} as base search
 algorithm. The
 other is the somewhat more mundane question of how best to implement
 a skyline query for our setting.  In this section, we discuss each
 in turn.
 
 \subsection{Hierarchical \Astar}
-\begin{table}
-	\begin{center}
-		\begin{tabular}{|c|cc|cc|}
-			\hline
-			\multirow{2}{*}{Problem} & \multicolumn{2}{c|}{Nodes Popped} & \multicolumn{2}{c|}{Time in Seconds} \\
-			& H\Astar & Skyplan & H\Astar & Skyplan \\
-			\hline
-			Pegsol 1 & 25 & 25 & 1.11 & 1.09 \\
-			Pegsol 2 & 246 & 170 & 10.26 & 6.86 \\
-			Pegsol 3 & 670 & 435 & 28.0 & 17.4 \\
-			Pegsol 4 & 592 & 587 & 37.2 & 36.3 \\
-			Pegsol 5 & 1553 & 636 & 86.4 & 31.2 \\
-			Pegsol 6 & 5695 & 2450 & 312 & 128 \\
-			Pegsol 7 & 589 & 328 & 31.3 & 16.8 \\
-			Pegsol 8 & 199,361 & 113,848 & 12,813 & 7271 \\
-			Pegsol 9 & 48,668 & 15,268 & 3750 & 1179 \\
-			Pegsol 10 & 272,112 & 197,165 & 21,108 & 15,138 \\
-			\hline
-			Openstacks 1 & 205 & 205 & 0.061 & 0.064 \\
-			Openstacks 2 & 588 & 588 & 0.320 & 0.320 \\
-			Openstacks 3 & 2022 & 2022 & 1.37 & 1.31 \\
-			Openstacks 4 & 53,630 & 53,630 & 46.7 & 51.3 \\
-			Openstacks 5 & 201,437 & 201,437 & 259 & 288 \\
-			\hline
-		\end{tabular}
-	\end{center}
-	\caption{Results on sequential domains. Times are averaged over 10 runs, except for Pegsol 10, which was averaged over 5 runs.}
-	\label{tab:seq-opt}
-\end{table}
-
-\begin{table}
-	\begin{center}
-		\begin{tabular}{|c|cc|cc|}
-			\hline
-			\multirow{2}{*}{Problem} & \multicolumn{2}{c|}{Nodes Popped} & \multicolumn{2}{c|}{Time in Seconds} \\
-			& H\Astar & Skyplan & H\Astar & Skyplan \\
-			\hline
-			Pegsol 1 & 29 & 29 & 0.697 & 0.643 \\
-			Pegsol 2 & 320 & 244 & 5.92 & 4.65 \\
-			Pegsol 3 & 983 & 694 & 19.0 & 13.5 \\
-			Pegsol 4 & 6133 & 1766 & 176.7 & 51.8 \\
-			Pegsol 5 & 2178 & 1147 & 51.5 & 25.1 \\
-			Pegsol 6 & 25,171 & 10,448 & 727 & 287 \\
-			\hline
-			Woodworking 1 & 722 & 427 & 0.103 & 0.051 \\
-			Woodworking 2 & 5030 & 2838 & 0.527 & 0.431 \\
-			Woodworking 3 & 19,279 & 11,395 & 1.99 & 1.96 \\
-			Woodworking 4 & 272,863 & 132,487 & 51.1 & 49.9 \\
-			Woodworking 5 & 2,626,520 & 1,312,511 & 588 & 2044 \\
-			\hline
-			Openstacks 1 & 3,872,619 & 70,644 & 437.2 & 23.4 \\
-			\hline
-		\end{tabular}
-	\end{center}
-	\caption{Results on temporal satisficing domains. Times are averaged over 10 runs.}
-	\label{tab:tempo-sat}
-\end{table}
-
 While skyline pruning works with any optimal search procedure, this
 pruning method has a particular synergy with the Hierarchical \Astar
 algorithm. Hierarchical \Astar works
@@ -823,6 +764,42 @@ in practice it is several orders of magnitude faster.
 
 \section{Experiments}
 
+\begin{table}
+  \footnotesize
+	\begin{center}
+		\begin{tabular}{|c|cc|cc|}
+			\hline
+			\multirow{2}{*}{Problem} & \multicolumn{2}{c|}{Nodes Popped} & \multicolumn{2}{c|}{Time (s) } \\
+			& \HAstar & Skyplan & \HAstar & Skyplan \\
+			\hline
+			Pegsol 1 & 25 & 25 & 1.11 & 1.09 \\
+			Pegsol 2 & 246 & 170 & 10.26 & 6.86 \\
+			Pegsol 3 & 670 & 435 & 28.0 & 17.4 \\
+			Pegsol 4 & 592 & 587 & 37.2 & 36.3 \\
+			Pegsol 5 & 1553 & 636 & 86.4 & 31.2 \\
+			Pegsol 6 & 5695 & 2450 & 312 & 128 \\
+			Pegsol 7 & 589 & 328 & 31.3 & 16.8 \\
+			Pegsol 8 & 199,361 & 113,848 & 12,813 & 7271 \\
+			Pegsol 9 & 48,668 & 15,268 & 3750 & 1179 \\
+			Pegsol 10 & 272,112 & 197,165 & 21,108 & 15,138 \\
+			\hline
+			Openstacks 1 & 205 & 205 & 0.061 & 0.064 \\
+			Openstacks 2 & 588 & 588 & 0.320 & 0.320 \\
+			Openstacks 3 & 2022 & 2022 & 1.37 & 1.31 \\
+			Openstacks 4 & 53,630 & 53,630 & 46.7 & 51.3 \\
+			Openstacks 5 & 201,437 & 201,437 & 259 & 288 \\
+			\hline
+		\end{tabular}
+	\end{center}
+  \vspace{-.15in}
+	\caption{Results on sequential domains. Times are averaged over 10 runs, except for Pegsol 10, which was averaged over 5 runs.}
+	\label{tab:seq-opt}
+  \vspace{-.24in}
+\end{table}
+
+
+
+
 
 
 We empirically evaluated Skyplan in two settings: a collection of standard domains from the International
@@ -830,7 +807,7 @@ Planning Competitions, and a new domain based on the video game StarCraft. In th
 the competitions have not focused on optimal planning in time-sensitive domains with concurrency. Instead, the
 domains in these competitions are either to find the optimal plan in a small domain without concurrency, or to
 find a good, satisficing plan in larger domains with concurrency.\footnote{Still other configurations exist,
-but the are further afield from our current interest.} To that end, we look at experiments from domains of both
+but these are further afield from our current interest.} To that end, we look at experiments from domains of both
 types.
 
 However, these standard domains are largely concerned with discrete objects
@@ -845,55 +822,46 @@ video game StarCraft. Because this domain involves manipulating large numbers
 of resources at the same time, Skyplan's strengths will be more readily
 apparent.
 
-XXX put in after Burkett's changes: We implemented two versions of Skyplan and the relevant baselines, one for
-the generic PDDL-based domains, and one specialized to the Starcraft domain. They differ primarily in the
+
+\begin{table}[t!]
+  \footnotesize
+	\begin{center}
+		\begin{tabular}{|c|cc|cc|}
+			\hline
+			\multirow{2}{*}{Problem} & \multicolumn{2}{c|}{Nodes Popped} & \multicolumn{2}{c|}{Time (s)} \\
+			& \HAstar & Skyplan & \HAstar & Skyplan \\
+			\hline
+			Pegsol 1 & 29 & 29 & 0.697 & 0.643 \\
+			Pegsol 2 & 320 & 244 & 5.92 & 4.65 \\
+			Pegsol 3 & 983 & 694 & 19.0 & 13.5 \\
+			Pegsol 4 & 6133 & 1766 & 176.7 & 51.8 \\
+			Pegsol 5 & 2178 & 1147 & 51.5 & 25.1 \\
+			Pegsol 6 & 25,171 & 10,448 & 727 & 287 \\
+			\hline
+			Woodworking 1 & 722 & 427 & 0.103 & 0.051 \\
+			Woodworking 2 & 5030 & 2838 & 0.527 & 0.431 \\
+			Woodworking 3 & 19,279 & 11,395 & 1.99 & 1.96 \\
+			Woodworking 4 & 272,863 & 132,487 & 51.1 & 49.9 \\
+			Woodworking 5 & 2,626,520 & 1,312,511 & 588 & 2044 \\
+			\hline
+			Openstacks 1 & 3,872,619 & 70,644 & 437.2 & 23.4 \\
+			\hline
+		\end{tabular}
+	\end{center}
+  \vspace{-.15in}
+	\caption{Results on temporal satisficing domains. Times are averaged over 10 runs.}
+	\label{tab:tempo-sat}
+  \vspace{-.24in}
+\end{table}
+
+We implemented two versions of Skyplan and the relevant baselines, one for
+the generic PDDL-based domains, and one specialized to the Starcraft domain.\footnote{Source for the generic
+implementation is available at \url{http://overmind.cs.berkeley.edu/skyplan}.} They differ primarily in the
 heuristics used. Our generic implementation uses a hierarchical \Astar implementation (with skyline pruning),
 with no heuristic at the base level. In StarCraft, we use a special heuristic crafted to this domain. The
 heuristic is essentially a critical path heuristic that ignores resource costs. XXX better description needed,
 probably needs to come later. Both implementations use a variant of expansion cores~\citep{chen09completeness,
-xu11theory}, only exploring actions that could possibly lead to satisfying some part of the goal predicate.
-
-
-Baseline descriptions:
-
-Finally, we note that no available open source planning system can handle both temporal constraints and resources. As these properties are key motivations for our approach, we instead constructed our own baselines.
-The most obvious baseline is to use \Astar without skyline pruning. In addition, for Starcraft we compare to a previously constructed non-optimal baseline. This baseline XXX.
-
-
-\subsection{The IPC Domains}
-
-We evaluated Skyplan on problems from three different domains that were released with the 2008 International
-Planning Competition: Pegsol (peg solitaire), Woodworking, and Openstacks. Of these, Pegsol and Openstacks
-each appeared in both sequential and temporal versions, and we evaluated on both. These particular domains were
-chosen because the initial problems from each domain were simple enough to be solved by basic optimal 
-planners. For all problems, we measured
-the number of nodes popped (including those popped during the recursive searches used
-for heuristic computation) and the total time taken by each algorithm.\footnote{All
-these experiments were run on isolated 2.67GHz Intel Xeon processors.} The results for the sequential variants
-are shown in Table~\ref{tab:seq-opt}, and those for the temporal ones, are in Table~\ref{tab:tempo-sat}.
-
-Skyplan is typically faster than Hierarchical \Astar, pruning as many as 98\% of the nodes that H\Astar
-expands, though the overhead of maintaining the skyline means that for this problem (the first temporal
-Openstacks problem), expanding fewer than 1/50th of the nodes results in a slightly less than 20x speedup. The
-Pegsol domains also showed consistent improvement, usually expanding fewer than half the nodes, and achieving
-commensurate speedups, particularly in the temporal variant. Results from the sequential Openstacks domain
-demonstrate that when the partial order fails to successfully prune many (or any) nodes, Skyplan's overhead
-eventually results in a slowdown vs H\AStar. The overhead is superlinear with respect to the size of the
-fringe, as exemplified in the Woodworking domain, where Skyplan's modest initial success gives way to the
-result in problem 5 where, due to the extremely high number of nodes, Skyplan's 50\% pruning rate is inadequate
-to combat the overhead, and the net effect of using Skyplan is an almost 4x slowdown.
-
-\subsection{The StarCraft Domain}
-
-StarCraft$^\textrm{\textregistered}$ is a real time strategy game
-created by Blizzard Entertainment, and one of the most competitive
-and popular games in the world. The game involves the accumulation
-of resources (minerals and gas), which are gathered by workers.
-These resources are then spent to build structures (e.g.\ a barracks),
-which are then in turn used to build military units. The ultimate goal is
-to build an army to defeat an opponent. 
-Skyplan is designed to take advantage of this sort of structure,
-suggesting that it will perform very well in this environment.
+xu11theory} to prune irrelevant actions.
 
 \begin{table*}
   \footnotesize
@@ -909,11 +877,58 @@ suggesting that it will perform very well in this environment.
 		\hline
 		\end{tabular}
 	\end{center}
+  \vspace{-.15in}
 	\caption{Results on the StarCraft domain. Times are in seconds.  Asterisks indicate that \Astar ran out of memory, even with 6GB
   of RAM. Cost is given as a multiple of the optimal cost.}
 	\label{tab:starcraft}
+  \vspace{-.2in}
 \end{table*}
 
+
+Finally, we note that no available open source planning system can
+handle both temporal constraints and resources. As these properties
+are key motivations for our approach, we instead constructed our
+own baselines.  The most obvious baseline is to use \Astar without
+skyline pruning. In addition, for Starcraft we compare to a 
+non-optimal greedy baseline. This planner determines
+which structures and units are required to reach the goal and builds
+the most costly structures and units first, taking dependencies into account.
+
+\subsection{The IPC Domains}
+
+We evaluated Skyplan on problems from three different domains that were released with the 2008 International
+Planning Competition: Pegsol (peg solitaire), Woodworking, and Openstacks. Of these, Pegsol and Openstacks
+each appeared in both sequential and temporal versions, and we evaluated on both. These particular domains were
+chosen because the initial problems from each domain were simple enough to be solved by basic optimal 
+planners. For all problems, we measured
+the number of nodes popped (including those popped during the recursive searches used
+for heuristic computation) and the total time taken by each algorithm.\footnote{All
+these experiments were run on isolated 2.67GHz Intel Xeon processors.} The results for the sequential variants
+are shown in Table~\ref{tab:seq-opt}, and those for the temporal ones are in Table~\ref{tab:tempo-sat}.
+
+Skyplan is typically faster than Hierarchical \Astarpunct, pruning as many as 98\% of the nodes that \Astar
+expands, though the overhead of maintaining the skyline means that for this problem (the first temporal
+Openstacks problem), expanding fewer than 1/50th of the nodes results in a slightly less than 20x speedup. The
+Pegsol domains also showed consistent improvement, usually expanding fewer than half the nodes, and achieving
+commensurate speedups, particularly in the temporal variant. Results from the sequential Openstacks domain
+demonstrate that when the partial order fails to successfully prune many (or any) nodes, Skyplan's overhead
+eventually results in a slowdown vs \Astarpunct. The overhead is superlinear with respect to the size of the
+fringe, as exemplified in the Woodworking domain, where Skyplan's modest initial success gives way to the
+result in problem 5 where, due to the extremely high number of nodes, Skyplan's 50\% pruning rate is inadequate
+to combat the overhead, and the net effect of using Skyplan is an almost 4x slowdown.
+
+
+\subsection{The StarCraft Domain}
+
+StarCraft$^\textrm{\textregistered}$ is a real time strategy game
+created by Blizzard Entertainment, and one of the most competitive
+and popular games in the world. The game involves the accumulation
+of resources (minerals and gas), which are gathered by workers.
+These resources are then spent to build structures (e.g.\ a barracks),
+which are then in turn used to build military units. The ultimate goal is
+to build an army to defeat an opponent. 
+Skyplan is designed to take advantage of this sort of structure,
+suggesting that it will perform well in this environment.
 
 There are many aspects of this game that are worth modeling from
 an artificial intelligence perspective in general and from planning
@@ -951,21 +966,19 @@ gathering, with resources gathered at a continuous rate. However,
 resources are actually gathered in discrete amounts. By more
 accurately modeling resource collection, we can find more
 accurate plans, particularly in the early game, where seconds
-are so critical.\footnote{We will release a PDDL version
-of this specification upon publication.}
+are so critical.
 
 \subsubsection{Results in the StarCraft Domain}
 We selected a number of early game units and resource combinations as goals for our planners.
-We compared Skyplan against an \Astar planner and a Greedy planner. The Greedy planner determines which 
-structures and units are required to reach the goal and builds the most costly structures first, taking dependencies
-into account.  We compared plan length and total planning time taken by each algorithm, and further compared the number
-of nodes expanded or pruned in Skyplan and \Astar. The implementations of Skyplan and \Astar used in this domain are
-not using the Hierarchical implementation discussed above, but rather a critical path heuristic.
+We compared Skyplan against an \Astar planner and our
+nonoptimal Greedy planner, measuring plan length and total planning time taken by each algorithm, and the number
+of nodes expanded in Skyplan and \Astarpunct.
 
 The results are in Table \ref{tab:starcraft}. As mentioned above, the nature of the domain allows for aggressive pruning, reducing the branching factor by as much as 90\%.
 This results in dramatic speedups over \Astar on all problems tested.
 In each experiment, Skyplan expands fewer than 10\% of the nodes that \Astar expands, expanding as few as 4\% as many nodes. 
-In the simplest problems, Skyplan takes half as long as \Astar; on the most complex problems, Skyplan takes less than 2\% the time of \Astar. In every case, the Greedy planner discovers a satisficing plan in less than 100ms, 
+In the simplest problems, Skyplan takes half as long as \Astarpunct; on the most complex problems, Skyplan takes less than 2\% the time
+of \Astarpunct. In every case, the Greedy planner discovers a satisficing plan in less than 100ms, 
 but these plans cost up to three times more than optimal.
 
 
