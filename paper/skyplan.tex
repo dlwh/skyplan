@@ -37,7 +37,6 @@
 /Author (David Hall, Alon Cohen, David Burkett and Dan Klein)}
 \setcounter{secnumdepth}{0}  
 
-\usepackage{hyperref}
  \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
@@ -856,7 +855,7 @@ apparent.
 
 We implemented two versions of Skyplan and the relevant baselines, one for
 the generic PDDL-based domains, and one specialized to the Starcraft domain.\footnote{Source for the generic
-implementation is available at \url{http://overmind.cs.berkeley.edu/skyplan}.} They differ primarily in the
+implementation is available at \texttt{http://overmind.cs.berkeley.edu/skyplan}.} They differ primarily in the
 heuristics used. Our generic implementation uses a hierarchical \Astar implementation (with skyline pruning),
 with no heuristic at the base level. In StarCraft, we use a special heuristic crafted to this domain. The
 heuristic is essentially a critical path heuristic that ignores resource costs. XXX better description needed,
