@@ -858,8 +858,8 @@ the generic PDDL-based domains, and one specialized to the Starcraft domain.\foo
 implementation is available at \texttt{http://overmind.cs.berkeley.edu/skyplan}.} They differ primarily in the
 heuristics used. Our generic implementation uses a hierarchical \Astar implementation (with skyline pruning),
 with no heuristic at the base level. In StarCraft, we use a special heuristic crafted to this domain. The
-heuristic is essentially a critical path heuristic that ignores resource costs. XXX better description needed,
-probably needs to come later. Both implementations use a variant of expansion cores~\citep{chen09completeness,
+heuristic is essentially a critical path heuristic that ignores resource costs, taking into account
+only the time to complete actions. Both implementations use a variant of expansion cores~\citep{chen09completeness,
 xu11theory} to prune irrelevant actions.
 
 \begin{table*}
