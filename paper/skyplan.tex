@@ -94,8 +94,8 @@ state. More specifically, we give conditions under which we can
 expand only those states in the \textit{skyline}, that is, states
 that are not dominated by any other state. Our system, Skyplan,
 is a refinement of Uniform Cost Search or \Astarpunct~\citep{astar} that
-expands only those states that are in the skyline. Because, heuristics like
-those used in \Astar cannot compare two states to one another, Skyplan
+expands only those states that are in the skyline. Because heuristics like
+those used in \Astar cannot directly compare two states to one another, Skyplan
 speeds up search in a way that is orthogonal to the traditional heuristics used in \Astarpunct.
 
 The central idea underlying our approach is to define a partial
@@ -109,7 +109,7 @@ In our analysis, we prove that our algorithm is both complete and
 optimal with a suitable partial order. Moreover, we prove that
 Skyplan is optimally efficient in the same sense as \Astarpunct. That
 is, given a fixed partial order, there is no complete and optimal
-algorithm that can expand fewer search nodes.
+algorithm that can expand fewer search nodes (up to breaking ties).
 
 In addition to proving the correctness of our approach, we also
 show how to automatically infer a compatible partial order from a problem
@@ -123,8 +123,8 @@ In our experiments, we compare Skyplan to a similar implementation
 of \Astar in several standard domains. In addition, we introduce a new
 domain, based on the popular video game StarCraft. Skyplan performs
 especially well in this latter domain, cutting the branching factor
-by as much as 90\% compared to \Astarpunct, and run times by more
-than a factor of 10.
+by more than 90\% compared to \Astarpunct, and run times by more
+than a factor of 80.
 
 \section{Skyplan}
 
@@ -219,7 +219,7 @@ expansion cores in our system.
     \Procedure{UCSSkyplan}{$s, G, F, \preceq$}
     \State Initialize $\textit{Open}=\{\langle s,0\rangle\}$, $\textit{Closed}=\{\}$
     \While{ \textit{Open} is not empty}
-    \State Pop the minimum cost state $\mathbf{m} = \langle m,c\rangle\in \textit{Open}$
+    \State Pop the min cost state $\mathbf{m} = \langle m,c\rangle\in \textit{Open}$
     \State $m\rightarrow \textit{Closed}$
       \If {$m\in F$} 
         \State \Return the path to $m$ following back pointers
@@ -497,7 +497,7 @@ $\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $\neg b(n) \Rightar
 	A predicate $b$ is $r$-\textit{negative} if $b$ is $r$-dependent and
 	$\forall n, n^\prime$ identical except $n(r) > n^\prime(r)$, $b(n) \Rightarrow b(n^\prime).$
 \end{definition}
-For example, the predicate ``$n(r) \ge 1$'' is $r$-positive, the predicate ``$n(r) \le 0$'' is \textit{r-negative}, the predicate ``$n(r_1) \ge n(r_2)$'' is $r_1$-positive, but $r_2$-negative, and the predicate ``$1 \le n(r) \le 2$'' is $r$-dependent, but neither $r$-positive nor $r$-negative.
+For example, the predicate ``$n(r) \ge 1$'' is $r$-positive, the predicate ``$n(r) \le 0$'' is $r$-negative, the predicate ``$n(r_1) \ge n(r_2)$'' is $r_1$-positive, but $r_2$-negative, and the predicate ``$1 \le n(r) \le 2$'' is $r$-dependent, but neither $r$-positive nor $r$-negative.
 
 Using these definitions, we can construct a partial order based on three parts of the problem definition:
 \begin{enumerate}
@@ -744,10 +744,9 @@ However, note that in high dimensions most states are clearly not
 related to one another.  They might both have different positive
 propositions, with one not having strictly more than another.
 Therefore, we can quickly do a ``coarse'' version of a skyline query
-by having a list of sets, one for each resource or proposition,
+by having a list of sets, one for each resource or proposition in $R^+$ (which in practice includes most resources),
 that contains all states in the skyline that have a positive value
-for that resource if the resource is in $R^+$, and
-vice versa if negative. Then, when deciding whether or not a new
+for that resource. Then, when deciding whether or not a new
 state is dominated, we can simply intersect these sets, and then
 run the check on those states in the intersection. Because most
 states in practice are dominated by very few (or sometimes no)
@@ -808,7 +807,7 @@ plan in larger domains with concurrency.\footnote{Still other
 configurations exist, but these are further afield from our current
 interest.} We conduct experiments from domains of both types.
 
-However, these standard domains are largely concerned with discrete objects
+These standard domains are largely concerned with discrete objects
 rather than ever-growing resources. Therefore, even the concurrent domains
 require a still rather modest amount of concurrency, with even the most complex
 problems never permitting more than a dozen simultaneous actions. Nevertheless, Skyplan can perform quite well in some of these domains, while in others it does not perform as well.
