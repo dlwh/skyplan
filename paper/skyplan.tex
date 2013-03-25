@@ -94,7 +94,7 @@ dominance to prune states that are strictly dominated by some other
 state. More specifically, we give conditions under which we can
 expand only those states in the \textit{skyline}, that is, states
 that are not dominated by any another state. Our system, Skyplan,
-is a refinement of Uniform Cost Search or \Astar~\citep{astar} that
+is a refinement of Uniform Cost Search or \Astarpunct~\citep{astar} that
 expands only those states that are in the skyline. Because, heuristics like
 those used in \Astar cannot compare two states to one another, Skyplan
 speeds up search in a way that is orthogonal to the traditional heuristics used in \Astarpunct.
@@ -316,9 +316,7 @@ case that $m$ is no cheaper than $n$ and that $n$'s successors
 to $\preceq$: every state that dominates a goal state must also be
 a goal. It is worth mentioning that there is always a compatible
 partial ordering: the trivial order with $m \npreceq n$ for all
-states $m$ and $n$ with $m \ne n$. We give a general construction
-of non-trivial orderings for a large class of problems in a subsequent
-section.
+states $m$ and $n$ with $m \ne n$. 
 
 %XXX maybe comment on whether a non-trivial partial
 %order need exist. If he means "trivial" in the math sense (that is, exactly the ordering 
@@ -579,7 +577,7 @@ fact just upside-down widgets. In this case, sprockets and widgets
 are interchangeable, and so we can actually prune based on the sum
 of their count. However, the method just described is incapable of
 realizing this relationship. In general, it is intractable to find
-the optimal partial ordering, but we suspect that such perverse
+the optimal partial ordering. That said, we suspect that such perverse
 examples are uncommon.
 
 
@@ -632,8 +630,7 @@ $\mathrm{elapse\_time}(k)$. The cost of this transition is $\lambda k$, and the 
 In concurrent domains, in addition to a collection of resources, the state contains a queue
 of in-progress actions. Here, we'll construct a new partial order $\poq$ that takes the
 action queue into account. To simplify the exposition, we assume that all
-actions have \emph{beneficial} completion effects.%\footnote{This assumption is met in all
-%domains we consider in this work.} 
+actions have \emph{beneficial} completion effects.
 Formally, this means that any resource whose value is
 increased at completion is in $R^+$ or $R^\emptyset$, and any resource whose value is decreased is in
 $R^-$ or $R^\emptyset$. The extension to more general action effects is straightforward.
@@ -801,13 +798,16 @@ in practice it is several orders of magnitude faster.
 
 
 
-We empirically evaluated Skyplan in two settings: a collection of standard domains from the International
-Planning Competitions, and a new domain based on the video game StarCraft. In the first setting, we note that
-the competitions have not focused on optimal planning in time-sensitive domains with concurrency. Instead, the
-domains in these competitions are either to find the optimal plan in a small domain without concurrency, or to
-find a good, satisficing plan in larger domains with concurrency.\footnote{Still other configurations exist,
-but these are further afield from our current interest.} To that end, we look at experiments from domains of both
-types.
+We empirically evaluated Skyplan in two settings: a collection of
+standard domains from the International Planning Competitions, and
+a new domain based on the video game StarCraft. In the first setting,
+we note that the competitions have not focused on optimal planning
+in time-sensitive domains with concurrency. Instead, the goals for
+problems in  these competitions are either to find the optimal plan
+in a small domain without concurrency, or to find a good, satisficing
+plan in larger domains with concurrency.\footnote{Still other
+configurations exist, but these are further afield from our current
+interest.} We conduct experiments from domains of both types.
 
 However, these standard domains are largely concerned with discrete objects
 rather than ever-growing resources. Therefore, even the concurrent domains
@@ -855,7 +855,7 @@ apparent.
 
 We implemented two versions of Skyplan and the relevant baselines, one for
 the generic PDDL-based domains, and one specialized to the Starcraft domain.\footnote{Source for the generic
-implementation is available at \texttt{http://overmind.cs.berkeley.edu/skyplan}.} They differ primarily in the
+implementation is available at \texttt{http://overmind.cs.berkeley.edu/skyplan}.} The two Skyplan and \Astar implementations differ primarily in the
 heuristics used. Our generic implementation uses a hierarchical \Astar implementation (with skyline pruning),
 with no heuristic at the base level. In StarCraft, we use a special heuristic crafted to this domain. The
 heuristic is essentially a critical path heuristic that ignores resource costs, taking into account
@@ -885,7 +885,7 @@ xu11theory} to prune irrelevant actions.
 
 
 Finally, we note that no available open source planning system can
-handle both temporal constraints and resources. As these properties
+handle both temporal problems and  problems with resources. As these properties
 are key motivations for our approach, we instead constructed our
 own baselines.  The most obvious baseline is to use \Astar without
 skyline pruning. In addition, for Starcraft we compare to a 
