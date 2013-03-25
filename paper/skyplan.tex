@@ -34,9 +34,8 @@
 \pdfinfo{
 /Title (Faster Optimal Planning with Partial-Order Pruning)
 /Subject (AAAI Publications)
-/Author (David Hall, Alon Cohen, David Burkett and Dan Klein)}
+/Author (David Hall, Alon Cohen, David Burkett, Dan Klein)}
 \setcounter{secnumdepth}{0}  
-
  \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
@@ -93,7 +92,7 @@ In this paper, we seek to formalize this notion, using Pareto
 dominance to prune states that are strictly dominated by some other
 state. More specifically, we give conditions under which we can
 expand only those states in the \textit{skyline}, that is, states
-that are not dominated by any another state. Our system, Skyplan,
+that are not dominated by any other state. Our system, Skyplan,
 is a refinement of Uniform Cost Search or \Astarpunct~\citep{astar} that
 expands only those states that are in the skyline. Because, heuristics like
 those used in \Astar cannot compare two states to one another, Skyplan
@@ -377,14 +376,14 @@ is \emph{complete}.
 \begin{proof}
 Suppose otherwise, then all paths to all goals must
 have been pruned. This would require a cycle of paths pruning each other: 
-paths $p^{1},\dots,p^{k}$ such that $p^{ (i+1) \mod k}$ was pruned by $p^{i }$.
-For all paths, let $n_{(i+1) \mod k} \in p^{(i+1)}$ be the state which pruned $p^{i}$ and
+paths $p^{1},\dots,p^{k}$ such that $p^{ (i+1) \mod k}$ pruned $p^{i }$.
+For all paths, let $n_{(i+1) \mod k} \in p^{(i+1) \mod k}$ be the state which pruned $p^{i}$ and
 $m_{i} \in p^{i}$ the corresponding state which was pruned 
 ($\forall i: m_{i} \preceq n_{(i+1) \mod k}$).
 
 Because each $m_{i}$ was pruned before being expanded,
 $n_{i} \neq m_{i}$ nor any state succeeding $m_{i}$ in $p^{i}_{m_{i}:}$.
-Hence $p^{i}_{n_{i}:} \supsetneq p^{i}_{m_{i}:} \implies |p^{i}_{n_{i}:}| > |p^{i}_{m_{i}:}|$.
+Hence $p^{i}_{n_{i}:} \supseteq p^{i}_{m_{i}:} \implies |p^{i}_{n_{i}:}| > |p^{i}_{m_{i}:}|$.
 By the lemma, we also have % \reference?
  $|p^{i}_{m_{i}:}| \geq |p^{(i+1)\mod k}_{n_{(i+1)\mod k}:}|$. Combining the
 inequalities yields: $|p^{1}_{m_{1}:}| \geq |p^{2}_{n_{2}:}| > |p^{2}_{m_{2}:}| > \dots > |p^{k}_{m_{k}:}| > |p^{1}_{m_{1}:}|$, 
@@ -863,22 +862,23 @@ only the time to complete actions. Both implementations use a variant of expansi
 xu11theory} to prune irrelevant actions.
 
 \begin{table*}
-  \footnotesize
 	\begin{center}
+    \scalebox{0.89}{
 		\begin{tabular}{|c|ccc|ccc|ccc|ccc|ccc|}
 		\hline
 		\multirow{2}{*}{Planner} & \multicolumn{3}{c|}{7 SCVs}  & \multicolumn{3}{c|}{1 Marine} & \multicolumn{3}{c|}{1 Firebat} & \multicolumn{3}{c|}{1 Marine, 1 Firebat} & \multicolumn{3}{c|}{2 Command Centers} \\
 		& Nodes & Time & Cost & Nodes & Time &Cost & Nodes & Time & Cost & Nodes & Time & Cost & Nodes & Time & Cost\\
 		\hline
-		\Astar 		& 3.1k & 0.27 & 1.0 & 11.7k & 1.34 & 1.0 &*  & * & *& *& *& *& *& *&* \\  
+    \Astar 		& 3.1k & 0.27 & 1.0 & 11.7k & 1.34 & 1.0 & {\tiny$>$}809k  & {\tiny$>$}1800 & * & {\tiny$>$}655k & {\tiny$>$}1800& *& {\tiny$>$}768k& {\tiny$>$}1800 &* \\  
 		Skyplan           & 233 & 0.12 & 1.0 & 405 & 0.22 & 1.0 & 97k & 21.9 & 1.0 & 509k & 393 & 1.0 & 26k & 209 & 1.0 \\
 		Greedy		&  & 0.03 & 1.0 &  & 0.06 & 3.3 &  & 0.06 & 2.4 &  & 0.09 & 2.4 &  & 0.06 & 2.1 \\
 		\hline
 		\end{tabular}
+    }
 	\end{center}
   \vspace{-.15in}
-	\caption{Results on the StarCraft domain. Times are in seconds.  Asterisks indicate that \Astar ran out of memory, even with 6GB
-  of RAM. Cost is given as a multiple of the optimal cost.}
+	\caption{Results on the StarCraft domain. Times are in seconds.  Asterisks indicate that \Astar timed out after more than 30
+  minutes of execution.}
 	\label{tab:starcraft}
   \vspace{-.2in}
 \end{table*}
