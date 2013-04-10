@@ -45,6 +45,8 @@ object IndexedCondition {
               (Some(PredicateCondition(predIndex, args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))), None)
             else
               (Some(ConstPredicateCondition(constPreds.index(name), args.toArray.map(CellExpression.fromRefExp(_, varBindings, globals)))), None)
+          case PDDL.Not(cond) =>
+            Some(NotCondition(rec(cond, varBindings)._1.getOrElse(TrueCondition))) -> None
         }
       } catch {
         case e: Exception =>

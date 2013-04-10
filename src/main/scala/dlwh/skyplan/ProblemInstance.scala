@@ -16,6 +16,7 @@ import java.util
 
 case class State(problem: ProblemInstance,
                  var time: Double,
+                 var actions: Int,
                  /** resources are grounded fluents with number domains */
                  resources: HashVector[Double],
                  /** axioms are grounded predicates */
@@ -61,6 +62,7 @@ case class State(problem: ProblemInstance,
       pendingActions.enqueue(groundedIndex, time+duration)
       if (action.t.contcondition.isDefined) actionsWithConditions.enqueue(groundedIndex, time+duration)
     }
+    actions += 1
   }
 
   def canElapseTime(delta: Double = -1): Boolean = {
@@ -103,7 +105,7 @@ case class State(problem: ProblemInstance,
   def isEqualToOrDominatedBy(other: State): Boolean = problem.dominanceChecker.isEqualToOrDominatedBy(this, other)
 
   def copy: State = {
-    State(problem, time, resources.copy, axioms.clone().asInstanceOf[java.util.BitSet], pendingActions.clone(), actionsWithConditions.clone())
+    State(problem, time, actions, resources.copy, axioms.clone().asInstanceOf[java.util.BitSet], pendingActions.clone(), actionsWithConditions.clone())
   }
 
 
@@ -118,6 +120,7 @@ case class State(problem: ProblemInstance,
     def resource(fn: Int, args: IndexedSeq[Int]): Double = {
       try {
         if (fn == problem.totalTimeIndex) time else
+        if (fn == problem.totalActionsIndex) actions else
         resources(problem.valFuns.ground(fn, args))
       } catch {
         case e:Exception =>
@@ -184,13 +187,14 @@ case class ProblemInstance(objects: GroundedObjects,
 
 
   lazy val totalTimeIndex = valFuns.index("total-time")
+  lazy val totalActionsIndex = valFuns.index("total-actions")
 
   def metric(s: State) = {
     metricExp.valueWith(s.makeContext(IndexedSeq()))
   }
 
   def initialState: State = {
-    val s = State(this, 0, HashVector.zeros[Double](valFuns.size max 1), new util.BitSet(), new ActionQueue(actions), new ActionQueue(actions))
+    val s = State(this, 0, 0, HashVector.zeros[Double](valFuns.size max 1), new util.BitSet(), new ActionQueue(actions), new ActionQueue(actions))
     initEffect.updateState(s, PDDL.Start, s.makeContext())
     s
   }
@@ -314,7 +318,7 @@ object ProblemInstance {
         Expression.Negation(base)
       else
         base
-    }.getOrElse(Expression.Number(0))
+    }.getOrElse(Expression.Resource(resources.index("total-actions"), IndexedSeq.empty))
 
     val init = IndexedEffect.fromEffect(problem.initialState, Index[String](), objs,  resources, constantResources, propositions, constantPropositions, ignoreSettingConstants = true)
     val (constAxioms, constResourceValues) = IndexedEffect.getConstantValues(problem.initialState, Index[String], objs, resources, constantResources, propositions, constantPropositions)
@@ -448,7 +452,9 @@ object ProblemInstance {
 
     // Special placeholder value for time spent
     numericIndex.index("total-time")
+    numericIndex.index("total-actions")
     groundingsN += groundFluent(objs, PDDL.Function("total-time", IndexedSeq.empty), grndNumByName)
+    groundingsN += groundFluent(objs, PDDL.Function("total-actions", IndexedSeq.empty), grndNumByName)
     inverseN ++= Array.fill(groundingsN.last.length)(groundingsN.length - 1)
 
     for( (name, f) <- functions) {

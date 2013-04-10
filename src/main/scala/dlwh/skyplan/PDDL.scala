@@ -69,7 +69,7 @@ object PDDL {
   case class Pred(predicate: String, args: IndexedSeq[RefExp]) extends Condition
   case class TimedCondition(time: TimeSpecifier, cond: Condition) extends Condition
   case class ContinuousCondition(cond: Condition) extends Condition
-  case class Not(predicate: String, args: IndexedSeq[RefExp]) extends Condition
+  case class Not(cond: Condition) extends Condition
   case class Or(predicate: String, args: IndexedSeq[RefExp]) extends Condition
 
   sealed trait ValExp
@@ -211,8 +211,9 @@ object PDDL {
       timed_gd
       | fn("exists")(surround(varList) ~ gd) ^^ {case (vars ~ con) => ExistentialCondition(vars, con)}
       | fn("forall")(surround(varList) ~ gd) ^^ {case (vars ~ con) => UniversalCondition(vars, con)}
-      | rcomp
+      | fn("not")(gd) ^^ {Not(_)}
       | fcomp
+      | rcomp
       | atomic_pred
     )
 
